@@ -9,18 +9,11 @@ pub struct Account<'a> {
 }
 
 impl<'a> Account<'a> {
-    pub fn new<E>(
-        account_type: AccountType,
-        components: impl IntoIterator<Item = impl TryInto<AccountComponent<'a>, Error = E>>,
-    ) -> Result<Self, E> {
-        let components: Result<Vec<AccountComponent<'a>>, E> =
-            components.into_iter().map(TryInto::try_into).collect();
-        let components = components?;
-        let res = Self {
+    pub fn new(account_type: AccountType, components: Vec<AccountComponent<'a>>) -> Self {
+        Self {
             account_type,
             components,
-        };
-        Ok(res)
+        }
     }
 
     pub fn account_type(&self) -> AccountType {
@@ -32,41 +25,51 @@ impl<'a> Account<'a> {
     }
 }
 
+/// Macro to create a new account with the specified type and components.
+///
+/// # Example
+/// ```
+/// use beancount_rs::model::account;
+///
+/// let acc = account!(Assets:US:Cash);
+/// ```
+#[macro_export]
+macro_rules! account_ {
+    ($acctype:ident : $($component:ident):*) => {
+        $crate::model::Account::new($crate::model::AccountType::$acctype, vec![$($crate::model::AccountComponent::new(stringify!($component)).unwrap()),*])
+    };
+}
+pub use account_ as account;
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_account_creation() {
-        let account = Account::new(AccountType::Assets, ["Cash"]);
-        assert!(account.is_ok());
+        let _acc: Account = account!(Assets:Cash);
+        assert_eq!(_acc.account_type(), AccountType::Assets);
+        let components: Vec<&str> = _acc.components().map(AsRef::as_ref).collect();
+        assert_eq!(components, ["Cash"]);
     }
 
     #[test]
+    #[should_panic(expected = "InvalidStart")]
     fn test_account_creation_invalid_component() {
-        let account = Account::new(AccountType::Assets, ["cash"]);
-        assert!(account.is_err());
+        let _acc: Account = account!(Assets:cash);
     }
 
     #[test]
     fn test_account_creation_multiple_components() {
-        let account = Account::new(AccountType::Expenses, ["Food", "Groceries", "Store-1"]);
-        assert!(account.is_ok());
+        let _acc: Account = account!(Expenses:Food:Groceries:Store);
+        assert_eq!(_acc.account_type(), AccountType::Expenses);
+        let components: Vec<&str> = _acc.components().map(AsRef::as_ref).collect();
+        assert_eq!(components, ["Food", "Groceries", "Store"]);
     }
 
     #[test]
+    #[should_panic(expected = "InvalidCharacter")]
     fn test_account_creation_mixed_valid_invalid() {
-        let account = Account::new(AccountType::Income, ["Salary", "invalid"]);
-        assert!(account.is_err());
-    }
-
-    #[test]
-    fn test_account_getters() {
-        let account = Account::new(AccountType::Liabilities, ["CreditCard"])
-            .expect("Account creation should succeed");
-
-        assert_eq!(account.account_type(), AccountType::Liabilities);
-        let components: Vec<&str> = account.components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["CreditCard"]);
+        let _acc: Account = account!(Income:Salary:In_valid);
     }
 }

@@ -14,7 +14,8 @@ const fn account_type_str(account_type: AccountType) -> &'static str {
     }
 }
 
-pub fn parse_account_type<'a>() -> impl Parser<'a, &'a str, AccountType> {
+pub fn parse_account_type<'a>() -> impl Parser<'a, &'a str, AccountType, extra::Err<Rich<'a, char>>>
+{
     choice((
         just(account_type_str(AccountType::Assets)).to(AccountType::Assets),
         just(account_type_str(AccountType::Liabilities)).to(AccountType::Liabilities),

@@ -12,6 +12,7 @@ pub fn parse_account_component<'a>()
         .to_slice()
         .try_map(|slice: &'a str, span| {
             AccountComponent::try_from(slice).map_err(|e| {
+                // TODO This doesn't seem displayed correctly?
                 chumsky::error::Rich::custom(span, format!("invalid account component: {}", e))
             })
         })
