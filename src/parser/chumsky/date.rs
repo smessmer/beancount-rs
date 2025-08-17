@@ -3,6 +3,7 @@ use chumsky::{label::LabelError, prelude::*, util::Maybe};
 use std::fmt::Write;
 
 pub fn parse_date<'a>() -> impl Parser<'a, &'a str, NaiveDate, extra::Err<Rich<'a, char>>> {
+    let date_separator = one_of("-/");
     let year = just('-')
         .or_not()
         .then(digits::<4>())
@@ -10,9 +11,9 @@ pub fn parse_date<'a>() -> impl Parser<'a, &'a str, NaiveDate, extra::Err<Rich<'
     let month = digits::<2>().labelled("two digit month");
     let day = digits::<2>().labelled("two digit day");
 
-    year.then_ignore(just('-'))
+    year.then_ignore(date_separator)
         .then(month)
-        .then_ignore(just('-'))
+        .then_ignore(date_separator)
         .then(day)
         .try_map(|(((neg, year), month), day), span| {
             let year = i32::try_from(year).unwrap();
@@ -110,11 +111,10 @@ mod tests {
     #[case("23-01-01", expected_found(2..3, ["digit"], '-'))] // wrong year format
     #[case("2023-1-01", expected_found(6..7, ["digit"], '-'))] // wrong month format
     #[case("2023-01-1", expected_found(9..9, [RichPattern::Any], None))] // wrong day format
-    #[case("2023/01/01", expected_found(4..5, ['-'], '/'))] // wrong separator
-    #[case("2023.01.01", expected_found(4..5, ['-'], '.'))] // wrong separator
-    #[case("20230101", expected_found(4..5, ['-'], '0'))] // no separators
-    #[case("2023-01", expected_found(7..7, ['-'], None))] // missing day
-    #[case("2023", expected_found(4..4, ['-'], None))] // missing month and day
+    #[case("2023.01.01", expected_found(4..5, ['-', '/'], '.'))] // wrong separator
+    #[case("20230101", expected_found(4..5, ['-', '/'], '0'))] // no separators
+    #[case("2023-01", expected_found(7..7, ['-', '/'], None))] // missing day
+    #[case("2023", expected_found(4..4, ['-', '/'], None))] // missing month and day
     #[case("01-01-2023", expected_found(2..3, ["digit"], '-'))] // wrong order
     #[case("2023-1-1", expected_found(6..7, ["digit"], '-'))] // single digit month and day
     #[case("", expected_found(0..0, ["four digit year"], None))] // empty string
@@ -130,6 +130,14 @@ mod tests {
         assert!(result.has_output(), "Failed to parse valid date: {}", input);
         let parsed_date = result.into_result().unwrap();
         let expected_date = NaiveDate::from_ymd_opt(year, month, day).unwrap();
+        assert_eq!(parsed_date, expected_date);
+    }
+
+    #[test]
+    fn different_separator() {
+        let result = parse_date().parse("2020/01/02");
+        let parsed_date = result.into_result().unwrap();
+        let expected_date = NaiveDate::from_ymd_opt(2020, 1, 2).unwrap();
         assert_eq!(parsed_date, expected_date);
     }
 
