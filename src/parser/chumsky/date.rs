@@ -6,15 +6,20 @@ pub fn parse_date<'a>() -> impl Parser<'a, &'a str, NaiveDate, extra::Err<Rich<'
     just('-')
         .or_not()
         .then(digits::<4>())
+        .labelled("four digit year")
         .then_ignore(just('-'))
-        .then(digits::<2>())
+        .then(digits::<2>().labelled("two digit month"))
         .then_ignore(just('-'))
-        .then(digits::<2>())
+        .then(digits::<2>().labelled("two digit day"))
         .try_map(|(((neg, year), month), day), span| {
             let year = i32::try_from(year).unwrap();
             let year: i32 = if neg.is_some() { -year } else { year };
-            NaiveDate::from_ymd_opt(year, month, day)
-                .ok_or_else(|| LabelError::<&'a str, _>::expected_found(["valid date"], None, span))
+            NaiveDate::from_ymd_opt(year, month, day).ok_or_else(|| {
+                Rich::custom(
+                    span,
+                    format!("{year:04}-{month:02}-{day:02} is not a valid date"),
+                )
+            })
         })
 }
 
@@ -41,9 +46,28 @@ pub fn marshal_date(date: &NaiveDate, writer: &mut impl Write) -> std::fmt::Resu
 
 #[cfg(test)]
 mod tests {
+    use std::ops::Range;
+
     use super::*;
+    use chumsky::error::RichPattern;
     use rstest::rstest;
     use rstest_reuse::*;
+
+    fn error(span: Range<usize>, message: &str) -> Rich<'_, char> {
+        Rich::custom(SimpleSpan::from(span), message)
+    }
+
+    fn expected_found(
+        span: Range<usize>,
+        expected: impl IntoIterator<Item = impl Into<RichPattern<'static, char>>>,
+        found: impl Into<Option<char>>,
+    ) -> Rich<'static, char> {
+        LabelError::<&str, _>::expected_found(
+            expected,
+            found.into().map(Maybe::Val),
+            SimpleSpan::from(span),
+        )
+    }
 
     #[template]
     #[rstest]
@@ -67,37 +91,35 @@ mod tests {
 
     #[template]
     #[rstest]
-    #[case("2023-13-01")] // invalid month
-    #[case("2023-00-01")] // invalid month
-    #[case("2023-01-32")] // invalid day
-    #[case("2023-01-00")] // invalid day
-    #[case("2023-02-29")] // not a leap year
-    #[case("2023-04-31")] // April doesn't have 31 days
-    #[case("2023-06-31")] // June doesn't have 31 days
-    #[case("2023-09-31")] // September doesn't have 31 days
-    #[case("2023-9-10")] // Missing leading zero
-    #[case("2023-09-1")] // Missing leading zero
-    #[case("2023-11-31")] // November doesn't have 31 days
-    fn invalid_date_template(#[case] input: &str) {}
+    #[case("2023-13-01", error(0..10, "2023-13-01 is not a valid date"))] // invalid month
+    #[case("2023-00-01", error(0..10, "2023-00-01 is not a valid date"))] // invalid month
+    #[case("2023-01-32", error(0..10, "2023-01-32 is not a valid date"))] // invalid day
+    #[case("2023-01-00", error(0..10, "2023-01-00 is not a valid date"))] // invalid day
+    #[case("2023-02-29", error(0..10, "2023-02-29 is not a valid date"))] // not a leap year
+    #[case("2023-04-31", error(0..10, "2023-04-31 is not a valid date"))] // April doesn't have 31 days
+    #[case("2023-06-31", error(0..10, "2023-06-31 is not a valid date"))] // June doesn't have 31 days
+    #[case("2023-09-31", error(0..10, "2023-09-31 is not a valid date"))] // September doesn't have 31 days
+    #[case("2023-11-31", error(0..10, "2023-11-31 is not a valid date"))] // November doesn't have 31 days
+    fn invalid_date_template(#[case] input: &str, #[case] expected_error: Rich<char>) {}
 
     #[template]
     #[rstest]
-    #[case("23-01-01")] // wrong year format
-    #[case("2023-1-01")] // wrong month format
-    #[case("2023-01-1")] // wrong day format
-    #[case("2023/01/01")] // wrong separator
-    #[case("2023.01.01")] // wrong separator
-    #[case("20230101")] // no separators
-    #[case("2023-01")] // missing day
-    #[case("2023")] // missing month and day
-    #[case("01-01-2023")] // wrong order
-    #[case("2023-1-1")] // single digit month and day
-    #[case("")] // empty string
-    #[case("not-a-date")] // completely invalid
-    #[case("2023-ab-01")] // non-numeric month
-    #[case("2023-01-ab")] // non-numeric day
-    #[case("abcd-01-01")] // non-numeric year
-    fn invalid_format_template(#[case] input: &str) {}
+    #[case("23-01-01", expected_found(2..3, ["digit"], '-'))] // wrong year format
+    #[case("2023-1-01", expected_found(6..7, ["digit"], '-'))] // wrong month format
+    #[case("2023-01-1", expected_found(9..9, [RichPattern::Any], None))] // wrong day format
+    #[case("2023/01/01", expected_found(4..5, ['-'], '/'))] // wrong separator
+    #[case("2023.01.01", expected_found(4..5, ['-'], '.'))] // wrong separator
+    #[case("20230101", expected_found(4..5, ['-'], '0'))] // no separators
+    #[case("2023-01", expected_found(7..7, ['-'], None))] // missing day
+    #[case("2023", expected_found(4..4, ['-'], None))] // missing month and day
+    #[case("01-01-2023", expected_found(2..3, ["digit"], '-'))] // wrong order
+    #[case("2023-1-1", expected_found(6..7, ["digit"], '-'))] // single digit month and day
+    #[case("", expected_found(0..0, ["four digit year"], None))] // empty string
+    #[case("not-a-date", expected_found(0..1, ["four digit year"], 'n'))] // completely invalid
+    #[case("2023-cd-01", expected_found(5..6, ["two digit month"], 'c'))] // non-numeric month
+    #[case("2023-01-bc", expected_found(8..9,["two digit day"], 'b'))] // non-numeric day
+    #[case("abcd-01-01", expected_found(0..1, ["four digit year"], 'a'))] // non-numeric year
+    fn invalid_format_template(#[case] input: &str, #[case] expected_error: Rich<char>) {}
 
     #[apply(valid_date_template)]
     fn parse_valid(#[case] input: &str, #[case] year: i32, #[case] month: u32, #[case] day: u32) {
@@ -109,7 +131,7 @@ mod tests {
     }
 
     #[apply(invalid_date_template)]
-    fn parse_invalid_date(#[case] input: &str) {
+    fn parse_invalid_date(#[case] input: &str, #[case] expected_error: Rich<char>) {
         let result = parse_date().parse(input);
         assert!(
             result.has_errors(),
@@ -117,12 +139,11 @@ mod tests {
             input
         );
         let errors = result.into_errors();
-        assert!(!errors.is_empty());
-        // TODO Check actual error messages
+        assert_eq!(vec![expected_error], errors);
     }
 
     #[apply(invalid_format_template)]
-    fn parse_invalid_format(#[case] input: &str) {
+    fn parse_invalid_format(#[case] input: &str, #[case] expected_error: Rich<char>) {
         let result = parse_date().parse(input);
         assert!(
             result.has_errors(),
@@ -130,7 +151,7 @@ mod tests {
             input
         );
         let errors = result.into_errors();
-        assert!(!errors.is_empty());
+        assert_eq!(vec![expected_error], errors);
     }
 
     #[apply(valid_date_template)]
