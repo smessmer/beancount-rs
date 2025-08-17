@@ -2,7 +2,7 @@ mod account;
 pub use account::{Account, AccountComponent, AccountType, InvalidAccountComponentError, account};
 
 mod commodity;
-pub use commodity::{Commodity, InvalidCommodityError};
+pub use commodity::{Commodity, InvalidCommodityError, commodity};
 
 mod directive;
 pub use directive::DirectiveOpen;

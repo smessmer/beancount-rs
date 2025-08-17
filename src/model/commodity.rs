@@ -93,9 +93,37 @@ impl<'a> AsRef<str> for Commodity<'a> {
     }
 }
 
+/// Macro to create a commodity
+///
+/// # Example
+/// ```
+/// use beancount_rs::model::commodity;
+///
+/// let com = commodity!(USD);
+/// ```
+#[macro_export]
+macro_rules! commodity_ {
+    ($name:ident) => {
+        $crate::model::Commodity::new(stringify!($name)).unwrap()
+    };
+}
+pub use commodity_ as commodity;
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_commodity_macro() {
+        let usd = commodity!(USD);
+        assert_eq!(usd.as_ref(), "USD");
+
+        let btc = commodity!(BTC);
+        assert_eq!(btc.as_ref(), "BTC");
+
+        let eur = commodity!(EUR);
+        assert_eq!(eur.as_ref(), "EUR");
+    }
 
     #[test]
     fn test_valid_commodities() {
