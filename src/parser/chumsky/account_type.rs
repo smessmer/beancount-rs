@@ -24,7 +24,10 @@ pub fn parse_account_type<'a>() -> impl Parser<'a, &'a str, AccountType> {
     ))
 }
 
-pub fn marshal_account_type(account_type: AccountType, mut writer: impl Write) -> std::fmt::Result {
+pub fn marshal_account_type(
+    account_type: AccountType,
+    writer: &mut impl Write,
+) -> std::fmt::Result {
     write!(writer, "{}", account_type_str(account_type))
 }
 
