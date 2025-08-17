@@ -11,4 +11,4 @@ mod commodity;
 pub use commodity::{Commodity, InvalidCommodityError, commodity};
 
 pub mod directive;
-pub use directive::{Directive, DirectiveContent, DirectiveOpen};
+pub use directive::{Directive, DirectiveContent, DirectiveOpen, DirectiveBalance};

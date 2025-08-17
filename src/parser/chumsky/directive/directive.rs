@@ -5,7 +5,10 @@ use crate::{
     model::directive::{Directive, DirectiveContent},
     parser::chumsky::{
         date::parse_date,
-        directive::open::{marshal_open_directive, parse_open_directive},
+        directive::{
+            balance::{marshal_balance_directive, parse_balance_directive},
+            open::{marshal_open_directive, parse_open_directive},
+        },
     },
 };
 
@@ -23,6 +26,7 @@ fn parse_directive_content<'a>()
 -> impl Parser<'a, &'a str, DirectiveContent<'a, 'a>, extra::Err<Rich<'a, char>>> {
     choice((
         parse_open_directive().map(DirectiveContent::Open),
+        parse_balance_directive().map(DirectiveContent::Balance),
         // TODO: Add more directive types here as they're implemented
     ))
 }
@@ -41,6 +45,7 @@ fn marshal_directive_content(
 ) -> std::fmt::Result {
     match content {
         DirectiveContent::Open(open) => marshal_open_directive(open, writer),
+        DirectiveContent::Balance(balance) => marshal_balance_directive(balance, writer),
     }
 }
 
@@ -63,6 +68,10 @@ mod tests {
     #[case("2024-01-01 open Expenses:Food")]
     #[case("2024-06-15 open Income:Salary")]
     #[case("2024-01-01 open Equity:Opening-Balances")]
+    #[case("2024-12-26 balance Liabilities:CreditCard -3492.02 USD")]
+    #[case("2024-01-01 balance Assets:Checking 1000.50 USD")]
+    #[case("2023-09-20 balance Assets:Investment 319.020 ~ 0.002 RGAGX")]
+    #[case("2024-06-30 balance Assets:Cash 0 USD")]
     fn valid_directive_template(#[case] input: &str) {}
 
     #[apply(valid_directive_template)]
@@ -198,6 +207,9 @@ mod tests {
                 assert_eq!(components, ["Cash"]);
                 assert_eq!(open.commodity_constraints().len(), 1);
             }
+            DirectiveContent::Balance(_) => {
+                panic!("Expected Open directive, got Balance");
+            }
         }
     }
 
@@ -240,5 +252,53 @@ mod tests {
         let input = "2024-13-01 open Assets:Cash";
         let result = parse_directive().parse(input);
         assert!(!result.has_output());
+    }
+
+    #[test]
+    fn parse_directive_content_balance() {
+        let input = "balance Assets:Checking 1000.50 USD";
+        let result = parse_directive_content().parse(input);
+        assert!(result.has_output());
+        let content = result.into_result().unwrap();
+
+        match content {
+            DirectiveContent::Balance(balance) => {
+                let components: Vec<&str> =
+                    balance.account().components().map(AsRef::as_ref).collect();
+                assert_eq!(components, ["Checking"]);
+                assert_eq!(
+                    *balance.amount_with_tolerance().number(),
+                    rust_decimal::Decimal::new(100050, 2)
+                );
+                assert_eq!(balance.amount_with_tolerance().commodity().as_ref(), "USD");
+                assert_eq!(balance.amount_with_tolerance().tolerance(), None);
+            }
+            DirectiveContent::Open(_) => {
+                panic!("Expected Balance directive, got Open");
+            }
+        }
+    }
+
+    #[test]
+    fn parse_directive_balance_with_date() {
+        let input = "2024-12-26 balance Liabilities:CreditCard -3492.02 USD";
+        let result = parse_directive().parse(input);
+        assert!(result.has_output());
+        let directive = result.into_result().unwrap();
+
+        assert_eq!(
+            directive.date(),
+            &NaiveDate::from_ymd_opt(2024, 12, 26).unwrap()
+        );
+        assert!(directive.as_balance().is_some());
+
+        let balance = directive.as_balance().unwrap();
+        let components: Vec<&str> = balance.account().components().map(AsRef::as_ref).collect();
+        assert_eq!(components, ["CreditCard"]);
+        assert_eq!(
+            *balance.amount_with_tolerance().number(),
+            rust_decimal::Decimal::new(-349202, 2)
+        );
+        assert_eq!(balance.amount_with_tolerance().commodity().as_ref(), "USD");
     }
 }

@@ -1,10 +1,11 @@
 use chrono::NaiveDate;
 
-use super::DirectiveOpen;
+use super::{DirectiveBalance, DirectiveOpen};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum DirectiveContent<'a, 'c> {
     Open(DirectiveOpen<'a, 'c>),
+    Balance(DirectiveBalance<'a, 'c>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -22,6 +23,10 @@ impl<'a, 'c> Directive<'a, 'c> {
         Self::new(date, DirectiveContent::Open(open))
     }
 
+    pub fn new_balance(date: NaiveDate, balance: DirectiveBalance<'a, 'c>) -> Self {
+        Self::new(date, DirectiveContent::Balance(balance))
+    }
+
     pub fn date(&self) -> &NaiveDate {
         &self.date
     }
@@ -33,12 +38,28 @@ impl<'a, 'c> Directive<'a, 'c> {
     pub fn as_open(&self) -> Option<&DirectiveOpen<'a, 'c>> {
         match &self.content {
             DirectiveContent::Open(open) => Some(open),
+            _ => None,
         }
     }
 
     pub fn into_open(self) -> Option<DirectiveOpen<'a, 'c>> {
         match self.content {
             DirectiveContent::Open(open) => Some(open),
+            _ => None,
+        }
+    }
+
+    pub fn as_balance(&self) -> Option<&DirectiveBalance<'a, 'c>> {
+        match &self.content {
+            DirectiveContent::Balance(balance) => Some(balance),
+            _ => None,
+        }
+    }
+
+    pub fn into_balance(self) -> Option<DirectiveBalance<'a, 'c>> {
+        match self.content {
+            DirectiveContent::Balance(balance) => Some(balance),
+            _ => None,
         }
     }
 }
