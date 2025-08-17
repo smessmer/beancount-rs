@@ -3,3 +3,5 @@ pub use account::{Account, AccountComponent, AccountType, InvalidAccountComponen
 
 mod commodity;
 pub use commodity::{Commodity, InvalidCommodityError};
+
+mod directive;
