@@ -1,5 +1,6 @@
 mod account;
 mod amount;
+mod amount_with_tolerance;
 mod commodity;
 mod commodity_list;
 mod date;
