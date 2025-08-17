@@ -1,7 +1,7 @@
 use chumsky::prelude::*;
 use std::{collections::HashSet, fmt::Write};
 
-use crate::{model::Commodity, parser::chumsky::parse_commodity};
+use crate::{model::Commodity, parser::chumsky::commodity::parse_commodity};
 
 pub fn parse_commodity_list<'a>()
 -> impl Parser<'a, &'a str, HashSet<Commodity<'a>>, extra::Err<Rich<'a, char>>> {

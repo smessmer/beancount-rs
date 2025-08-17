@@ -27,6 +27,7 @@ impl<'a, 'c> DirectiveOpen<'a, 'c> {
         self.commodity_constraints.iter().map(|c| c)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use common_macros::hash_set;

@@ -5,3 +5,4 @@ mod commodity;
 pub use commodity::{Commodity, InvalidCommodityError};
 
 mod directive;
+pub use directive::DirectiveOpen;
