@@ -2,7 +2,7 @@ use derive_more::Display;
 use std::borrow::Cow;
 use thiserror::Error;
 
-#[derive(Error, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Error, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InvalidAccountComponentError {
     #[error("Account component cannot be empty")]
     Empty,
@@ -12,7 +12,7 @@ pub enum InvalidAccountComponentError {
     InvalidCharacter,
 }
 
-#[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct AccountComponent<'a> {
     component: Cow<'a, str>,
 }

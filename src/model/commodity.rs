@@ -5,7 +5,7 @@ use thiserror::Error;
 
 const MAX_COMMODITY_NAME_LENGTH: usize = 24;
 
-#[derive(Error, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Error, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum InvalidCommodityError {
     #[error("Commodity name cannot be empty")]
     Empty,
@@ -21,7 +21,7 @@ pub enum InvalidCommodityError {
     TooLong,
 }
 
-#[derive(Debug, Display, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Display, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Commodity<'a> {
     commodity: Cow<'a, str>,
 }

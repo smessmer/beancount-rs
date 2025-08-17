@@ -1,8 +1,6 @@
-use anyhow::Result;
-
 use crate::model::account::{account_component::AccountComponent, account_type::AccountType};
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Account<'a> {
     account_type: AccountType,
     components: Vec<AccountComponent<'a>>,
