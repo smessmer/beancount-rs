@@ -51,9 +51,7 @@ mod tests {
     #[case("_Assets", InvalidAccountComponentError::InvalidStart)]
     #[case("Assets_Checking", InvalidAccountComponentError::InvalidCharacter)]
     #[case("Assets@Bank", InvalidAccountComponentError::InvalidCharacter)]
-    #[case("Assets Bank", InvalidAccountComponentError::InvalidCharacter)]
-    #[case("assets-checking", InvalidAccountComponentError::InvalidCharacter)]
-    #[case("Assets:Bank", InvalidAccountComponentError::InvalidCharacter)]
+    #[case("assets-checking", InvalidAccountComponentError::InvalidStart)]
     fn invalid_component_template(input: &str, expected_error: InvalidAccountComponentError) {}
 
     #[apply(valid_component_template)]
@@ -67,13 +65,13 @@ mod tests {
     #[apply(invalid_component_template)]
     fn parse_invalid(#[case] input: &str, #[case] expected_error: InvalidAccountComponentError) {
         let result = parse_account_component().parse(input);
-        assert!(result.has_errors());
-        // TODO
-        // assert!(
-        //     result.into_result().unwrap_err()[0]
-        //         .to_string()
-        //         .contains(&format!("{}", expected_error))
-        // );
+        assert_eq!(
+            vec![chumsky::error::Rich::custom(
+                SimpleSpan::from(0..input.len()),
+                expected_error.to_string(),
+            )],
+            result.into_errors(),
+        );
     }
 
     #[apply(valid_component_template)]

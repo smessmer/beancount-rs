@@ -44,55 +44,77 @@ mod tests {
     use rstest::rstest;
     use rstest_reuse::*;
 
-    mod account_type {
-        use super::*;
+    #[template]
+    fn account_type_template(
+        #[values(
+            AccountType::Assets,
+            AccountType::Liabilities,
+            AccountType::Income,
+            AccountType::Expenses,
+            AccountType::Equity
+        )]
+        expected: AccountType,
+    ) {
+    }
 
-        #[template]
-        fn account_type_template(
-            #[values(
-                AccountType::Assets,
-                AccountType::Liabilities,
-                AccountType::Income,
-                AccountType::Expenses,
-                AccountType::Equity
-            )]
-            expected: AccountType,
-        ) {
-        }
+    #[apply(account_type_template)]
+    #[rstest]
+    fn parse(expected: AccountType) {
+        let input = account_type_str(expected);
+        let result = parse_account_type().parse(input);
+        assert_eq!(Ok(expected), result.into_result());
+    }
 
-        #[apply(account_type_template)]
-        #[rstest]
-        fn parse(expected: AccountType) {
-            let input = account_type_str(expected);
-            let result = parse_account_type().parse(input);
-            assert_eq!(Ok(expected), result.into_result());
-        }
+    #[apply(account_type_template)]
+    #[rstest]
+    fn parse_with_extra_suffix(expected: AccountType) {
+        let input = format!("{} extra", account_type_str(expected));
+        let result = parse_account_type().parse(&input);
+        assert!(result.into_result().is_err());
+    }
 
-        #[apply(account_type_template)]
-        #[rstest]
-        fn parse_with_extra_suffix(expected: AccountType) {
-            let input = format!("{} extra", account_type_str(expected));
-            let result = parse_account_type().parse(&input);
-            assert!(result.into_result().is_err());
-        }
+    #[apply(account_type_template)]
+    #[rstest]
+    fn marshal(expected: AccountType) {
+        let mut output = String::new();
+        let result = marshal_account_type(expected, &mut output);
+        assert!(result.is_ok());
+        assert_eq!(output, account_type_str(expected));
+    }
 
-        #[apply(account_type_template)]
-        #[rstest]
-        fn marshal(expected: AccountType) {
-            let mut output = String::new();
-            let result = marshal_account_type(expected, &mut output);
-            assert!(result.is_ok());
-            assert_eq!(output, account_type_str(expected));
-        }
+    #[apply(account_type_template)]
+    #[rstest]
+    fn marshal_and_parse(expected: AccountType) {
+        let mut marshalled = String::new();
+        marshal_account_type(expected, &mut marshalled).unwrap();
 
-        #[apply(account_type_template)]
-        #[rstest]
-        fn marshal_and_parse(expected: AccountType) {
-            let mut marshalled = String::new();
-            marshal_account_type(expected, &mut marshalled).unwrap();
+        let result = parse_account_type().parse(&marshalled);
+        assert_eq!(Ok(expected), result.into_result());
+    }
 
-            let result = parse_account_type().parse(&marshalled);
-            assert_eq!(Ok(expected), result.into_result());
-        }
+    #[test]
+    fn parse_invalid_component() {
+        let input = "In_valid";
+        let result = parse_account_type().parse(input);
+        assert_eq!(
+            vec![chumsky::error::Rich::custom(
+                SimpleSpan::from(0..input.len()),
+                "Account component can only contain letters, numbers or dashes",
+            )],
+            result.into_errors(),
+        );
+    }
+
+    #[test]
+    fn parse_unknown_type() {
+        let input = "Invalid";
+        let result = parse_account_type().parse(input);
+        assert_eq!(
+            vec![chumsky::error::Rich::custom(
+                SimpleSpan::from(0..input.len()),
+                "Expected Assets, Liabilities, Income, Expenses or Equity",
+            )],
+            result.into_errors(),
+        );
     }
 }

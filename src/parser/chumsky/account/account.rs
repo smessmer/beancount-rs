@@ -20,7 +20,6 @@ pub fn parse_account<'a>() -> impl Parser<'a, &'a str, Account<'a>, extra::Err<R
                 .collect(),
         )
         .map(|(account_type, components)| Account::new(account_type, components))
-        .labelled("account")
 }
 
 pub fn marshal_account(account: Account, writer: &mut impl Write) -> std::fmt::Result {
@@ -36,8 +35,30 @@ pub fn marshal_account(account: Account, writer: &mut impl Write) -> std::fmt::R
 mod tests {
     use super::*;
     use crate::model::{AccountComponent, AccountType};
+    use chumsky::{
+        error::{Rich, RichPattern},
+        label::LabelError,
+        util::Maybe,
+    };
     use rstest::rstest;
     use rstest_reuse::*;
+    use std::ops::Range;
+
+    fn error(span: Range<usize>, message: &str) -> Rich<'_, char> {
+        Rich::custom(SimpleSpan::from(span), message)
+    }
+
+    fn expected_found(
+        span: Range<usize>,
+        expected: impl IntoIterator<Item = impl Into<RichPattern<'static, char>>>,
+        found: impl Into<Option<char>>,
+    ) -> Rich<'static, char> {
+        LabelError::<&str, _>::expected_found(
+            expected,
+            found.into().map(Maybe::Val),
+            SimpleSpan::from(span),
+        )
+    }
 
     #[template]
     #[rstest]
@@ -58,20 +79,20 @@ mod tests {
 
     #[template]
     #[rstest]
-    #[case("assets:Cash")] // Invalid account type (lowercase)
-    #[case("InvalidType:Cash")] // Invalid account type
-    #[case("Assets:")] // Empty component
-    #[case("Assets:cash")] // Invalid component (lowercase start)
-    #[case("Assets:Valid:")] // Empty component at end
-    #[case("Assets::Valid")] // Empty component in middle
-    #[case("Assets:Cash_Money")] // Invalid character in component
-    #[case("Assets:Cash@Bank")] // Invalid character in component
-    #[case("Assets:Cash Money")] // Space in component
-    #[case("Assets:-Invalid")] // Invalid start character
-    #[case("")] // Empty input
-    #[case(":Cash")] // Missing account type
-    #[case("Assets:Cash:")] // Trailing colon with empty component
-    fn invalid_account_template(#[case] input: &str) {}
+    #[case("assets:Cash", error(0..6, "Account component must start with an uppercase letter or a number"))] // Invalid account type (lowercase)
+    #[case("InvalidType:Cash", error(0..11, "Expected Assets, Liabilities, Income, Expenses or Equity"))] // Invalid account type
+    #[case("Assets:", error(7..7, "Account component cannot be empty"))] // Empty component
+    #[case("Assets:cash", error(7..11, "Account component must start with an uppercase letter or a number"))] // Invalid component (lowercase start)
+    #[case("Assets:Valid:", error(13..13, "Account component cannot be empty"))] // Empty component at end
+    #[case("Assets::Valid", error(7..7, "Account component cannot be empty"))] // Empty component in middle
+    #[case("Assets:Cash_Money", error(7..17, "Account component can only contain letters, numbers or dashes"))]
+    #[case("Assets:Cash@Bank", error(7..16, "Account component can only contain letters, numbers or dashes"))]
+    #[case("Assets:Cash Money", expected_found(11..12, [':'.into(), RichPattern::EndOfInput], ' '))] // Space in component
+    #[case("Assets:-Invalid", error(7..15,"Account component must start with an uppercase letter or a number"))]
+    #[case("", error(0..0, "Account component cannot be empty"))]
+    #[case(":Cash", error(0..0, "Account component cannot be empty"))]
+    #[case("Assets:Cash:", error(12..12, "Account component cannot be empty"))]
+    fn invalid_account_template(#[case] input: &str, #[case] expected_error: Rich<char>) {}
 
     #[apply(valid_account_template)]
     fn parse_valid(
@@ -94,9 +115,9 @@ mod tests {
     }
 
     #[apply(invalid_account_template)]
-    fn parse_invalid(#[case] input: &str) {
+    fn parse_invalid(#[case] input: &str, #[case] expected_error: Rich<char>) {
         let result = parse_account().parse(input);
-        assert!(result.has_errors(), "Expected parse failure for: {}", input);
+        assert_eq!(vec![expected_error], result.into_errors(),);
     }
 
     #[apply(valid_account_template)]
