@@ -6,17 +6,13 @@ use crate::model::AccountComponent;
 pub fn parse_account_component<'a>()
 -> impl Parser<'a, &'a str, AccountComponent<'a>, extra::Err<Rich<'a, char>>> {
     any()
-        .filter(|c: &char| *c != ':' && !c.is_whitespace())
+        .filter(|c: &char| !c.is_whitespace() && *c != ':')
         .repeated()
-        .at_least(1)
         .to_slice()
         .try_map(|slice: &'a str, span| {
-            AccountComponent::try_from(slice).map_err(|e| {
-                // TODO This doesn't seem displayed correctly?
-                chumsky::error::Rich::custom(span, format!("invalid account component: {}", e))
-            })
+            AccountComponent::try_from(slice)
+                .map_err(|e| chumsky::error::Rich::custom(span, format!("{}", e)))
         })
-        .labelled("account component")
 }
 
 pub fn marshal_account_component(

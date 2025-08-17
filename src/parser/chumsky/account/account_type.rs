@@ -2,7 +2,9 @@ use std::fmt::Write;
 
 use chumsky::prelude::*;
 
-use crate::model::AccountType;
+use crate::{
+    model::AccountType, parser::chumsky::account::account_component::parse_account_component,
+};
 
 const fn account_type_str(account_type: AccountType) -> &'static str {
     match account_type {
@@ -16,14 +18,17 @@ const fn account_type_str(account_type: AccountType) -> &'static str {
 
 pub fn parse_account_type<'a>() -> impl Parser<'a, &'a str, AccountType, extra::Err<Rich<'a, char>>>
 {
-    choice((
-        just(account_type_str(AccountType::Assets)).to(AccountType::Assets),
-        just(account_type_str(AccountType::Liabilities)).to(AccountType::Liabilities),
-        just(account_type_str(AccountType::Income)).to(AccountType::Income),
-        just(account_type_str(AccountType::Expenses)).to(AccountType::Expenses),
-        just(account_type_str(AccountType::Equity)).to(AccountType::Equity),
-    ))
-    .labelled("account type")
+    parse_account_component().try_map(|s, span| match s.as_ref() {
+        c if c == account_type_str(AccountType::Assets) => Ok(AccountType::Assets),
+        c if c == account_type_str(AccountType::Liabilities) => Ok(AccountType::Liabilities),
+        c if c == account_type_str(AccountType::Income) => Ok(AccountType::Income),
+        c if c == account_type_str(AccountType::Expenses) => Ok(AccountType::Expenses),
+        c if c == account_type_str(AccountType::Equity) => Ok(AccountType::Equity),
+        _ => Err(chumsky::error::Rich::custom(
+            span,
+            "Expected Assets, Liabilities, Income, Expenses or Equity",
+        )),
+    })
 }
 
 pub fn marshal_account_type(
