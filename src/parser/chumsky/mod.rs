@@ -1,5 +1,6 @@
 mod account;
 mod commodity;
+mod commodity_list;
 mod date;
 mod directive;
 mod error_format;
