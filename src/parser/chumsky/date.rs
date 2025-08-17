@@ -15,13 +15,13 @@ pub fn parse_date<'a>() -> impl Parser<'a, &'a str, NaiveDate, extra::Err<Rich<'
         .then(month)
         .then_ignore(date_separator)
         .then(day)
-        .try_map(|(((neg, year), month), day), span| {
+        .try_map_with(|(((neg, year), month), day), extra| {
             let year = i32::try_from(year).unwrap();
             let year: i32 = if neg.is_some() { -year } else { year };
             NaiveDate::from_ymd_opt(year, month, day).ok_or_else(|| {
                 Rich::custom(
-                    span,
-                    format!("{year:04}-{month:02}-{day:02} is not a valid date"),
+                    extra.span(),
+                    format!("{} is not a valid date", extra.slice()),
                 )
             })
         })
@@ -96,32 +96,51 @@ mod tests {
     #[template]
     #[rstest]
     #[case("2023-13-01", error(0..10, "2023-13-01 is not a valid date"))] // invalid month
+    #[case("2023/13/01", error(0..10, "2023/13/01 is not a valid date"))]
     #[case("2023-00-01", error(0..10, "2023-00-01 is not a valid date"))] // invalid month
+    #[case("2023/00/01", error(0..10, "2023/00/01 is not a valid date"))]
     #[case("2023-01-32", error(0..10, "2023-01-32 is not a valid date"))] // invalid day
+    #[case("2023/01/32", error(0..10, "2023/01/32 is not a valid date"))]
     #[case("2023-01-00", error(0..10, "2023-01-00 is not a valid date"))] // invalid day
+    #[case("2023/01/00", error(0..10, "2023/01/00 is not a valid date"))]
     #[case("2023-02-29", error(0..10, "2023-02-29 is not a valid date"))] // not a leap year
+    #[case("2023/02/29", error(0..10, "2023/02/29 is not a valid date"))]
     #[case("2023-04-31", error(0..10, "2023-04-31 is not a valid date"))] // April doesn't have 31 days
+    #[case("2023/04/31", error(0..10, "2023/04/31 is not a valid date"))]
     #[case("2023-06-31", error(0..10, "2023-06-31 is not a valid date"))] // June doesn't have 31 days
+    #[case("2023/06/31", error(0..10, "2023/06/31 is not a valid date"))]
     #[case("2023-09-31", error(0..10, "2023-09-31 is not a valid date"))] // September doesn't have 31 days
+    #[case("2023/09/31", error(0..10, "2023/09/31 is not a valid date"))]
     #[case("2023-11-31", error(0..10, "2023-11-31 is not a valid date"))] // November doesn't have 31 days
+    #[case("2023/11/31", error(0..10, "2023/11/31 is not a valid date"))]
     fn invalid_date_template(#[case] input: &str, #[case] expected_error: Rich<char>) {}
 
     #[template]
     #[rstest]
     #[case("23-01-01", expected_found(2..3, ["digit"], '-'))] // wrong year format
+    #[case("23/01/01", expected_found(2..3, ["digit"], '/'))]
     #[case("2023-1-01", expected_found(6..7, ["digit"], '-'))] // wrong month format
+    #[case("2023/1/01", expected_found(6..7, ["digit"], '/'))]
     #[case("2023-01-1", expected_found(9..9, [RichPattern::Any], None))] // wrong day format
+    #[case("2023/01/1", expected_found(9..9, [RichPattern::Any], None))]
     #[case("2023.01.01", expected_found(4..5, ['-', '/'], '.'))] // wrong separator
     #[case("20230101", expected_found(4..5, ['-', '/'], '0'))] // no separators
     #[case("2023-01", expected_found(7..7, ['-', '/'], None))] // missing day
+    #[case("2023/01", expected_found(7..7, ['-', '/'], None))]
     #[case("2023", expected_found(4..4, ['-', '/'], None))] // missing month and day
     #[case("01-01-2023", expected_found(2..3, ["digit"], '-'))] // wrong order
+    #[case("01/01/2023", expected_found(2..3, ["digit"], '/'))]
     #[case("2023-1-1", expected_found(6..7, ["digit"], '-'))] // single digit month and day
+    #[case("2023/1/1", expected_found(6..7, ["digit"], '/'))]
     #[case("", expected_found(0..0, ["four digit year"], None))] // empty string
     #[case("not-a-date", expected_found(0..1, ["four digit year"], 'n'))] // completely invalid
+    #[case("not/a/date", expected_found(0..1, ["four digit year"], 'n'))]
     #[case("2023-cd-01", expected_found(5..6, ["two digit month"], 'c'))] // non-numeric month
+    #[case("2023/cd/01", expected_found(5..6, ["two digit month"], 'c'))]
     #[case("2023-01-bc", expected_found(8..9,["two digit day"], 'b'))] // non-numeric day
+    #[case("2023/01/bc", expected_found(8..9,["two digit day"], 'b'))]
     #[case("abcd-01-01", expected_found(0..1, ["four digit year"], 'a'))] // non-numeric year
+    #[case("abcd/01/01", expected_found(0..1, ["four digit year"], 'a'))]
     fn invalid_format_template(#[case] input: &str, #[case] expected_error: Rich<char>) {}
 
     #[apply(valid_date_template)]
