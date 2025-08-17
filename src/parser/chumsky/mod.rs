@@ -1,3 +1,4 @@
 mod account;
-mod account_component;
-mod account_type;
+
+// TODO Only export account parsing, not type or component
+pub use account::parse_account_component;
