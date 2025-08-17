@@ -22,6 +22,7 @@ pub fn parse_account_type<'a>() -> impl Parser<'a, &'a str, AccountType> {
         just(account_type_str(AccountType::Expenses)).to(AccountType::Expenses),
         just(account_type_str(AccountType::Equity)).to(AccountType::Equity),
     ))
+    .labelled("account type")
 }
 
 pub fn marshal_account_type(

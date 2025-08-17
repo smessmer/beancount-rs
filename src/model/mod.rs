@@ -1,2 +1,2 @@
 mod account;
-pub use account::{Account, AccountType};
+pub use account::{Account, AccountComponent, AccountType, InvalidAccountComponentError};
