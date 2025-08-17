@@ -10,6 +10,8 @@ chrono = "0.4.41"
 chumsky = "0.10.1"
 common_macros = "0.1.1"
 derive_more = {version="2.0.1", features=["display"] }
+rust_decimal = "1.37.0"
+rust_decimal_macros = "1.37.0"
 thiserror = "2.0.15"
 
 [dev-dependencies]

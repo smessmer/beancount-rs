@@ -1,4 +1,5 @@
 mod account;
+mod amount;
 mod commodity;
 mod commodity_list;
 mod date;
