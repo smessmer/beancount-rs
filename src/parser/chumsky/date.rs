@@ -3,14 +3,17 @@ use chumsky::{label::LabelError, prelude::*, util::Maybe};
 use std::fmt::Write;
 
 pub fn parse_date<'a>() -> impl Parser<'a, &'a str, NaiveDate, extra::Err<Rich<'a, char>>> {
-    just('-')
+    let year = just('-')
         .or_not()
         .then(digits::<4>())
-        .labelled("four digit year")
+        .labelled("four digit year");
+    let month = digits::<2>().labelled("two digit month");
+    let day = digits::<2>().labelled("two digit day");
+
+    year.then_ignore(just('-'))
+        .then(month)
         .then_ignore(just('-'))
-        .then(digits::<2>().labelled("two digit month"))
-        .then_ignore(just('-'))
-        .then(digits::<2>().labelled("two digit day"))
+        .then(day)
         .try_map(|(((neg, year), month), day), span| {
             let year = i32::try_from(year).unwrap();
             let year: i32 = if neg.is_some() { -year } else { year };

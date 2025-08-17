@@ -14,12 +14,19 @@ impl<T> ParseResultExt for ParseResult<T, Rich<'_, char>> {
 }
 
 pub fn format_error<'a>(error: &Rich<'a, char>) -> Report<'a> {
-    Report::build(ReportKind::Error, error.span().into_range())
+    let mut report = Report::build(ReportKind::Error, error.span().into_range())
         .with_message(error.to_string())
         .with_label(
             ariadne::Label::new(error.span().into_range())
                 .with_message(error.reason().to_string())
                 .with_color(ariadne::Color::Red),
-        )
-        .finish()
+        );
+    for (expected_pattern, span) in error.contexts() {
+        report = report.with_label(
+            ariadne::Label::new(span.into_range())
+                .with_message(expected_pattern.to_string())
+                .with_color(ariadne::Color::Yellow),
+        );
+    }
+    report.finish()
 }
