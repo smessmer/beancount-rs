@@ -1,10 +1,12 @@
 use chumsky::{prelude::*, text::whitespace};
-use rust_decimal::Decimal;
 use std::fmt::Write;
 
 use crate::{
     model::Amount,
-    parser::chumsky::commodity::{marshal_commodity, parse_commodity},
+    parser::chumsky::{
+        commodity::{marshal_commodity, parse_commodity},
+        decimal::{marshal_decimal, parse_decimal},
+    },
 };
 
 pub fn parse_amount<'a>() -> impl Parser<'a, &'a str, Amount<'a>, extra::Err<Rich<'a, char>>> {
@@ -14,25 +16,9 @@ pub fn parse_amount<'a>() -> impl Parser<'a, &'a str, Amount<'a>, extra::Err<Ric
         .map(|(number, commodity)| Amount::new(number, commodity))
 }
 
-fn parse_decimal<'a>() -> impl Parser<'a, &'a str, Decimal, extra::Err<Rich<'a, char>>> {
-    let sign = one_of("+-").or_not();
-    let digits = one_of('0'..='9').repeated().at_least(1);
-    let decimal_part = just('.')
-        .then(one_of('0'..='9').repeated().at_least(1))
-        .or_not();
-
-    sign.then(digits)
-        .then(decimal_part)
-        .to_slice()
-        .try_map(|slice: &'a str, span| {
-            slice.parse::<Decimal>().map_err(|e| {
-                chumsky::error::Rich::custom(span, format!("Invalid decimal number: {}", e))
-            })
-        })
-}
-
 pub fn marshal_amount(amount: &Amount, writer: &mut impl Write) -> std::fmt::Result {
-    write!(writer, "{} ", amount.number())?;
+    marshal_decimal(amount.number(), writer)?;
+    write!(writer, " ")?;
     marshal_commodity(amount.commodity(), writer)
 }
 
