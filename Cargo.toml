@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 anyhow = "1.0.99"
 ariadne = "0.5.1"
+chrono = "0.4.41"
 chumsky = "0.10.1"
 derive_more = {version="2.0.1", features=["display"] }
 thiserror = "2.0.15"
