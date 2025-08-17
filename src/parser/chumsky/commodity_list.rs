@@ -12,11 +12,14 @@ pub fn parse_commodity_list<'a>()
         .map(|commodities| commodities.into_iter().collect())
 }
 
-pub fn marshal_commodity_list(
-    commodities: &HashSet<Commodity>,
+pub fn marshal_commodity_list<'a, 'b>(
+    commodities: impl Iterator<Item = &'a Commodity<'b>>,
     writer: &mut impl Write,
-) -> std::fmt::Result {
-    let mut sorted_commodities: Vec<_> = commodities.iter().collect();
+) -> std::fmt::Result
+where
+    'b: 'a,
+{
+    let mut sorted_commodities: Vec<_> = commodities.collect();
     sorted_commodities.sort_by(|a, b| a.cmp(b));
     let mut sorted_commodities = sorted_commodities.into_iter();
 
@@ -72,7 +75,7 @@ mod tests {
     #[apply(valid_commodity_list_template)]
     fn marshal_commodity_list_test(#[case] _input: &str, #[case] commodities: HashSet<Commodity>) {
         let mut output = String::new();
-        let result = marshal_commodity_list(&commodities, &mut output);
+        let result = marshal_commodity_list(commodities.iter(), &mut output);
         assert!(result.is_ok());
 
         // Parse the marshalled output back
@@ -123,7 +126,7 @@ mod tests {
         ];
 
         let mut output = String::new();
-        let result = marshal_commodity_list(&commodities, &mut output);
+        let result = marshal_commodity_list(commodities.iter(), &mut output);
         assert!(result.is_ok());
         assert_eq!(output, "CAD,EUR,GBP,USD");
     }
