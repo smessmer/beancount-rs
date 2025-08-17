@@ -3,6 +3,7 @@ mod amount;
 mod commodity;
 mod commodity_list;
 mod date;
+mod decimal;
 mod directive;
 mod error_format;
 
