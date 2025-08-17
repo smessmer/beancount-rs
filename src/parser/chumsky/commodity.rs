@@ -15,7 +15,7 @@ pub fn parse_commodity<'a>() -> impl Parser<'a, &'a str, Commodity<'a>, extra::E
         })
 }
 
-pub fn marshal_commodity(commodity: Commodity, writer: &mut impl Write) -> std::fmt::Result {
+pub fn marshal_commodity(commodity: &Commodity, writer: &mut impl Write) -> std::fmt::Result {
     write!(writer, "{}", commodity)
 }
 
@@ -97,7 +97,7 @@ mod tests {
     fn marshal(input: &str) {
         let commodity = Commodity::try_from(input).unwrap();
         let mut output = String::new();
-        let result = marshal_commodity(commodity, &mut output);
+        let result = marshal_commodity(&commodity, &mut output);
         assert!(result.is_ok());
         assert_eq!(output, input);
     }
@@ -109,7 +109,7 @@ mod tests {
 
         // Marshal to string
         let mut marshalled = String::new();
-        marshal_commodity(original_commodity.clone(), &mut marshalled).unwrap();
+        marshal_commodity(&original_commodity, &mut marshalled).unwrap();
 
         // Parse back from string
         let result = parse_commodity().parse(&marshalled);

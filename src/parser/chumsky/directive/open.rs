@@ -4,9 +4,8 @@ use std::fmt::Write;
 use crate::{
     model::DirectiveOpen,
     parser::chumsky::{
-        account::parse_account,
+        account::{marshal_account, parse_account},
         commodity_list::{marshal_commodity_list, parse_commodity_list},
-        marshal_account,
     },
 };
 
