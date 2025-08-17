@@ -9,11 +9,13 @@ use crate::{
     },
 };
 
+const KEYWORD_OPEN: &str = "open";
+
 /// Parser for open directive (without date)
 /// Syntax: "open" <account> [<commodity_list>]
 pub fn parse_open_directive<'a>()
 -> impl Parser<'a, &'a str, DirectiveOpen<'a, 'a>, extra::Err<Rich<'a, char>>> {
-    keyword("open")
+    keyword(KEYWORD_OPEN)
         .ignore_then(parse_account().padded())
         .then(
             parse_commodity_list()
@@ -28,7 +30,7 @@ pub fn marshal_open_directive(
     directive: &DirectiveOpen,
     writer: &mut impl Write,
 ) -> std::fmt::Result {
-    write!(writer, "open ")?;
+    write!(writer, "{KEYWORD_OPEN} ")?;
 
     marshal_account(directive.account().clone(), writer)?;
 
