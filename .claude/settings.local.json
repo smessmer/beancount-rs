@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(cargo test:*)"
+      "Bash(cargo test:*)",
+      "WebFetch(domain:beancount.github.io)",
+      "Bash(cargo:*)"
     ],
     "deny": []
   }
