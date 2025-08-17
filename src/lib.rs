@@ -2,4 +2,4 @@ pub mod model;
 mod parser;
 
 // TODO Remove?
-pub use parser::{ParseResultExt, parse_account_component};
+pub use parser::{ParseResultExt, parse_account};

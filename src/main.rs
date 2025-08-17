@@ -1,7 +1,7 @@
 use std::io::BufRead as _;
 
 use ariadne::Source;
-use beancount_rs::{ParseResultExt as _, parse_account_component};
+use beancount_rs::{ParseResultExt as _, parse_account};
 use chumsky::Parser as _;
 
 fn main() {
@@ -12,7 +12,7 @@ fn main() {
     for line in handle.lines() {
         let line = line.unwrap();
         // parse line as account component
-        let account_component = parse_account_component().parse(&line);
+        let account_component = parse_account().parse(&line);
         for error_report in account_component.get_formatted_errors() {
             error_report.print(Source::from(&line)).unwrap();
         }
