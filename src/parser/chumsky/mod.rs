@@ -1,4 +1,5 @@
 mod account;
+mod commodity;
 mod date;
 mod directive;
 mod error_format;
