@@ -4,5 +4,5 @@ pub use account::{Account, AccountComponent, AccountType, InvalidAccountComponen
 mod commodity;
 pub use commodity::{Commodity, InvalidCommodityError, commodity};
 
-mod directive;
-pub use directive::DirectiveOpen;
+pub mod directive;
+pub use directive::{Directive, DirectiveContent, DirectiveOpen};
