@@ -73,7 +73,7 @@ mod tests {
     }
 
     #[apply(valid_decimal_template)]
-    fn marshal_and_parse_decimal(#[case] input: &str, #[case] expected: Decimal) {
+    fn marshal_and_parse_decimal(#[case] input: &str, #[case] _expected: Decimal) {
         // Parse the original
         let result = parse_decimal().parse(input);
         assert!(result.has_output(), "Failed to parse decimal: {}", input);
