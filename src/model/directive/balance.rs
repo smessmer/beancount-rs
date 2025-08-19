@@ -1,6 +1,7 @@
 use crate::model::{Account, AmountWithTolerance};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+/// Balance assertion
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct DirectiveBalance<'a, 'c> {
     account: Account<'a>,
     amount_with_tolerance: AmountWithTolerance<'c>,
