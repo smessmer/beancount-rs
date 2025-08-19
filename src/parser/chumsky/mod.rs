@@ -7,6 +7,7 @@ mod date;
 mod decimal;
 mod directive;
 mod error_format;
+mod posting_amount;
 
 pub use directive::{marshal_directive, parse_directive};
 pub use error_format::ParseResultExt;

@@ -12,3 +12,5 @@ pub use commodity::{Commodity, InvalidCommodityError, commodity};
 
 pub mod directive;
 pub use directive::{Directive, DirectiveContent, DirectiveOpen, DirectiveBalance};
+mod posting_amount;
+pub use posting_amount::PostingAmount;

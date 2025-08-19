@@ -6,7 +6,7 @@ use crate::model::Commodity;
 pub fn parse_commodity<'a>() -> impl Parser<'a, &'a str, Commodity<'a>, extra::Err<Rich<'a, char>>>
 {
     any()
-        .filter(|c: &char| !c.is_whitespace() && *c != ',')
+        .filter(|c: &char| !c.is_whitespace() && *c != ',' && *c != '}')
         .repeated()
         .to_slice()
         .try_map(|slice: &'a str, span| {
