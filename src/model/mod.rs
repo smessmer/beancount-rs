@@ -15,8 +15,12 @@ pub use directive::{Directive, DirectiveContent, DirectiveOpen, DirectiveBalance
 
 mod posting;
 pub use posting::Posting;
+
 mod posting_amount;
 pub use posting_amount::PostingAmount;
 
 mod flag;
 pub use flag::Flag;
+
+mod transaction_description;
+pub use transaction_description::TransactionDescription;
