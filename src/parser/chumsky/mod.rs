@@ -8,10 +8,7 @@ mod decimal;
 mod directive;
 mod error_format;
 mod flag;
-mod posting;
-mod posting_amount;
 mod quoted_string;
-mod transaction_description;
 
 pub use directive::{marshal_directive, parse_directive};
 pub use error_format::ParseResultExt;

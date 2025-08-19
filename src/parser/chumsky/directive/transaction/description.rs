@@ -2,7 +2,7 @@ use chumsky::{prelude::*, text::whitespace};
 use std::fmt::Write;
 
 use crate::{
-    model::TransactionDescription,
+    model::directive::TransactionDescription,
     parser::chumsky::quoted_string::{marshal_quoted_string, parse_quoted_string},
 };
 

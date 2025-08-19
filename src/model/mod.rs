@@ -11,16 +11,7 @@ mod commodity;
 pub use commodity::{Commodity, InvalidCommodityError, commodity};
 
 pub mod directive;
-pub use directive::{Directive, DirectiveContent, DirectiveOpen, DirectiveBalance};
-
-mod posting;
-pub use posting::Posting;
-
-mod posting_amount;
-pub use posting_amount::PostingAmount;
+pub use directive::{Directive, DirectiveBalance, DirectiveContent, DirectiveOpen};
 
 mod flag;
 pub use flag::Flag;
-
-mod transaction_description;
-pub use transaction_description::TransactionDescription;

@@ -1,4 +1,4 @@
-use crate::model::{Account, Flag, PostingAmount};
+use crate::model::{Account, Flag, directive::PostingAmount};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Posting<'a, 'c> {

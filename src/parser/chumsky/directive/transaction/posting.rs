@@ -2,11 +2,11 @@ use chumsky::{prelude::*, text::whitespace};
 use std::fmt::Write;
 
 use crate::{
-    model::Posting,
+    model::directive::Posting,
     parser::chumsky::{
         account::{marshal_account, parse_account},
+        directive::transaction::posting_amount::{marshal_posting_amount, parse_posting_amount},
         flag::{marshal_flag, parse_flag},
-        posting_amount::{marshal_posting_amount, parse_posting_amount},
     },
 };
 
@@ -60,7 +60,7 @@ pub fn marshal_posting(posting: &Posting, writer: &mut impl Write) -> std::fmt::
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Amount, Flag, account, commodity};
+    use crate::model::{Amount, Flag, account, commodity, directive::PostingAmount};
     use rstest::rstest;
     use rstest_reuse::*;
     use rust_decimal_macros::dec;
@@ -195,7 +195,7 @@ mod tests {
         let account = account!(Assets:Checking);
         let commodity = commodity!(USD);
         let amount = Amount::new(dec!(100.50), commodity);
-        let posting_amount = crate::model::PostingAmount::new(amount);
+        let posting_amount = PostingAmount::new(amount);
         let posting = Posting::new(account, posting_amount);
 
         let mut output = String::new();
@@ -220,7 +220,7 @@ mod tests {
         let account = account!(Liabilities:CreditCard);
         let commodity = commodity!(USD);
         let amount = Amount::new(dec!(-37.45), commodity);
-        let posting_amount = crate::model::PostingAmount::new(amount);
+        let posting_amount = PostingAmount::new(amount);
         let posting = Posting::new(account, posting_amount);
 
         let mut output = String::new();
@@ -234,7 +234,7 @@ mod tests {
         let account = account!(Assets:Cash);
         let commodity = commodity!(USD);
         let amount = Amount::new(dec!(0), commodity);
-        let posting_amount = crate::model::PostingAmount::new(amount);
+        let posting_amount = PostingAmount::new(amount);
         let posting = Posting::new(account, posting_amount);
 
         let mut output = String::new();
@@ -319,7 +319,7 @@ mod tests {
         let account = account!(Assets:Checking);
         let commodity = commodity!(USD);
         let amount = Amount::new(dec!(100.50), commodity);
-        let posting_amount = crate::model::PostingAmount::new(amount);
+        let posting_amount = PostingAmount::new(amount);
         let posting = Posting::new(account, posting_amount).with_flag(Flag::Complete);
 
         let mut output = String::new();
@@ -335,7 +335,7 @@ mod tests {
         let usd = commodity!(USD);
         let amount = Amount::new(dec!(10), stock);
         let cost = Amount::new(dec!(50.00), usd);
-        let posting_amount = crate::model::PostingAmount::new(amount).with_cost(cost);
+        let posting_amount = PostingAmount::new(amount).with_cost(cost);
         let posting = Posting::new(account, posting_amount);
 
         let mut output = String::new();
@@ -351,7 +351,7 @@ mod tests {
         let usd = commodity!(USD);
         let amount = Amount::new(dec!(10), stock);
         let price = Amount::new(dec!(55.00), usd);
-        let posting_amount = crate::model::PostingAmount::new(amount).with_price(price);
+        let posting_amount = PostingAmount::new(amount).with_price(price);
         let posting = Posting::new(account, posting_amount);
 
         let mut output = String::new();

@@ -2,7 +2,7 @@ use chumsky::{prelude::*, text::whitespace};
 use std::fmt::Write;
 
 use crate::{
-    model::{Amount, PostingAmount},
+    model::{Amount, directive::PostingAmount},
     parser::chumsky::amount::{marshal_amount, parse_amount},
 };
 
