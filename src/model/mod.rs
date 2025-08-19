@@ -14,3 +14,6 @@ pub mod directive;
 pub use directive::{Directive, DirectiveContent, DirectiveOpen, DirectiveBalance};
 mod posting_amount;
 pub use posting_amount::PostingAmount;
+
+mod flag;
+pub use flag::Flag;
