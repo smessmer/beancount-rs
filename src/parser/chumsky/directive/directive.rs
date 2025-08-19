@@ -8,6 +8,7 @@ use crate::{
         directive::{
             balance::{marshal_balance_directive, parse_balance_directive},
             open::{marshal_open_directive, parse_open_directive},
+            transaction::{marshal_transaction_directive, parse_transaction_directive},
         },
     },
 };
@@ -27,6 +28,7 @@ fn parse_directive_content<'a>()
     choice((
         parse_open_directive().map(DirectiveContent::Open),
         parse_balance_directive().map(DirectiveContent::Balance),
+        parse_transaction_directive().map(DirectiveContent::Transaction),
         // TODO: Add more directive types here as they're implemented
     ))
 }
@@ -46,6 +48,9 @@ fn marshal_directive_content(
     match content {
         DirectiveContent::Open(open) => marshal_open_directive(open, writer),
         DirectiveContent::Balance(balance) => marshal_balance_directive(balance, writer),
+        DirectiveContent::Transaction(transaction) => {
+            marshal_transaction_directive(transaction, writer)
+        }
     }
 }
 
@@ -72,6 +77,11 @@ mod tests {
     #[case("2024-01-01 balance Assets:Checking 1000.50 USD")]
     #[case("2023-09-20 balance Assets:Investment 319.020 ~ 0.002 RGAGX")]
     #[case("2024-06-30 balance Assets:Cash 0 USD")]
+    #[case(
+        "2024-01-15 * \"Cafe Mogador\" \"Lamb tagine with wine\"\n  Liabilities:CreditCard  -37.45 USD\n  Expenses:Restaurant"
+    )]
+    #[case("2024-02-01 ! \"Direct deposit\"\n  Assets:Checking  2500.00 USD\n  Income:Salary")]
+    #[case("2024-03-10 *\n  Assets:Cash  -20.00 USD\n  Expenses:Coffee  20.00 USD")]
     fn valid_directive_template(#[case] input: &str) {}
 
     #[apply(valid_directive_template)]
@@ -210,6 +220,9 @@ mod tests {
             DirectiveContent::Balance(_) => {
                 panic!("Expected Open directive, got Balance");
             }
+            DirectiveContent::Transaction(_) => {
+                panic!("Expected Open directive, got Transaction");
+            }
         }
     }
 
@@ -275,6 +288,9 @@ mod tests {
             }
             DirectiveContent::Open(_) => {
                 panic!("Expected Balance directive, got Open");
+            }
+            DirectiveContent::Transaction(_) => {
+                panic!("Expected Balance directive, got Transaction");
             }
         }
     }
