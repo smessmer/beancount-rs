@@ -76,28 +76,76 @@ mod tests {
 
     #[template]
     #[rstest]
-    #[case("100.50 USD")]
-    #[case("10 STOCK {50.00 USD}")]
-    #[case("10 STOCK @ 55.00 USD")]
-    #[case("10 STOCK {50.00 USD} @ 55.00 USD")]
-    #[case("10 STOCK { 50.00 USD } @ 55.00 USD")]
-    #[case("-37.45 USD")]
-    #[case("0 USD")]
-    fn valid_posting_amount_template(#[case] input: &str) {}
+    #[case("100.50 USD", dec!(100.50), "USD", None, None)]
+    #[case("10 STOCK {50.00 USD}", dec!(10), "STOCK", Some((dec!(50.00), "USD")), None)]
+    #[case("10 STOCK @ 55.00 USD", dec!(10), "STOCK", None, Some((dec!(55.00), "USD")))]
+    #[case("10 STOCK {50.00 USD} @ 55.00 USD", dec!(10), "STOCK", Some((dec!(50.00), "USD")), Some((dec!(55.00), "USD")))]
+    #[case("10 STOCK { 50.00 USD } @ 55.00 USD", dec!(10), "STOCK", Some((dec!(50.00), "USD")), Some((dec!(55.00), "USD")))]
+    #[case("-37.45 USD", dec!(-37.45), "USD", None, None)]
+    #[case("0 USD", dec!(0), "USD", None, None)]
+    fn valid_posting_amount_template(
+        #[case] input: &str,
+        #[case] expected_number: rust_decimal::Decimal,
+        #[case] expected_commodity: &str,
+        #[case] expected_cost: Option<(rust_decimal::Decimal, &str)>,
+        #[case] expected_price: Option<(rust_decimal::Decimal, &str)>
+    ) {}
 
     #[apply(valid_posting_amount_template)]
-    fn parse_valid_posting_amount(#[case] input: &str) {
+    fn parse_valid_posting_amount(
+        #[case] input: &str,
+        #[case] expected_number: rust_decimal::Decimal,
+        #[case] expected_commodity: &str,
+        #[case] expected_cost: Option<(rust_decimal::Decimal, &str)>,
+        #[case] expected_price: Option<(rust_decimal::Decimal, &str)>
+    ) {
         let result = parse_posting_amount().parse(input);
         assert!(
             result.has_output(),
             "Failed to parse posting amount: {}",
             input
         );
-        let _parsed = result.into_result().unwrap();
+        let parsed = result.into_result().unwrap();
+        
+        // Validate amount
+        assert_eq!(*parsed.amount().number(), expected_number);
+        assert_eq!(parsed.amount().commodity().as_ref(), expected_commodity);
+        
+        // Validate cost
+        match expected_cost {
+            Some((cost_number, cost_commodity)) => {
+                assert!(parsed.has_cost());
+                let cost = parsed.cost().unwrap();
+                assert_eq!(*cost.number(), cost_number);
+                assert_eq!(cost.commodity().as_ref(), cost_commodity);
+            }
+            None => {
+                assert!(!parsed.has_cost());
+            }
+        }
+        
+        // Validate price
+        match expected_price {
+            Some((price_number, price_commodity)) => {
+                assert!(parsed.has_price());
+                let price = parsed.price().unwrap();
+                assert_eq!(*price.number(), price_number);
+                assert_eq!(price.commodity().as_ref(), price_commodity);
+            }
+            None => {
+                assert!(!parsed.has_price());
+            }
+        }
     }
 
     #[apply(valid_posting_amount_template)]
-    fn marshal_and_parse_posting_amount(#[case] input: &str) {
+    fn marshal_and_parse_posting_amount(
+        #[case] input: &str,
+        #[case] _expected_number: rust_decimal::Decimal,
+        #[case] _expected_commodity: &str,
+        #[case] _expected_cost: Option<(rust_decimal::Decimal, &str)>,
+        #[case] _expected_price: Option<(rust_decimal::Decimal, &str)>
+    ) {
         // First parse the original
         let result = parse_posting_amount().parse(input);
         assert!(result.has_output());
@@ -117,69 +165,6 @@ mod tests {
         assert_eq!(original, reparsed);
     }
 
-    #[test]
-    fn parse_posting_amount_basic() {
-        let input = "100.50 USD";
-        let result = parse_posting_amount().parse(input);
-        assert!(result.has_output());
-        let posting_amount = result.into_result().unwrap();
-
-        assert_eq!(*posting_amount.amount().number(), dec!(100.50));
-        assert_eq!(posting_amount.amount().commodity().as_ref(), "USD");
-        assert!(!posting_amount.has_cost());
-        assert!(!posting_amount.has_price());
-    }
-
-    #[test]
-    fn parse_posting_amount_with_cost() {
-        let input = "10 STOCK {50.00 USD}";
-        let result = parse_posting_amount().parse(input);
-        if !result.has_output() {
-            println!("Parsing failed for: {}", input);
-            println!("Errors: {:?}", result.clone().into_errors());
-        }
-        assert!(result.has_output());
-        let posting_amount = result.into_result().unwrap();
-
-        assert_eq!(*posting_amount.amount().number(), dec!(10));
-        assert_eq!(posting_amount.amount().commodity().as_ref(), "STOCK");
-        assert!(posting_amount.has_cost());
-        assert_eq!(*posting_amount.cost().unwrap().number(), dec!(50.00));
-        assert_eq!(posting_amount.cost().unwrap().commodity().as_ref(), "USD");
-        assert!(!posting_amount.has_price());
-    }
-
-    #[test]
-    fn parse_posting_amount_with_price() {
-        let input = "10 STOCK @ 55.00 USD";
-        let result = parse_posting_amount().parse(input);
-        assert!(result.has_output());
-        let posting_amount = result.into_result().unwrap();
-
-        assert_eq!(*posting_amount.amount().number(), dec!(10));
-        assert_eq!(posting_amount.amount().commodity().as_ref(), "STOCK");
-        assert!(!posting_amount.has_cost());
-        assert!(posting_amount.has_price());
-        assert_eq!(*posting_amount.price().unwrap().number(), dec!(55.00));
-        assert_eq!(posting_amount.price().unwrap().commodity().as_ref(), "USD");
-    }
-
-    #[test]
-    fn parse_posting_amount_with_cost_and_price() {
-        let input = "10 STOCK {50.00 USD} @ 55.00 USD";
-        let result = parse_posting_amount().parse(input);
-        assert!(result.has_output());
-        let posting_amount = result.into_result().unwrap();
-
-        assert_eq!(*posting_amount.amount().number(), dec!(10));
-        assert_eq!(posting_amount.amount().commodity().as_ref(), "STOCK");
-        assert!(posting_amount.has_cost());
-        assert_eq!(*posting_amount.cost().unwrap().number(), dec!(50.00));
-        assert_eq!(posting_amount.cost().unwrap().commodity().as_ref(), "USD");
-        assert!(posting_amount.has_price());
-        assert_eq!(*posting_amount.price().unwrap().number(), dec!(55.00));
-        assert_eq!(posting_amount.price().unwrap().commodity().as_ref(), "USD");
-    }
 
     #[test]
     fn marshal_posting_amount_basic() {

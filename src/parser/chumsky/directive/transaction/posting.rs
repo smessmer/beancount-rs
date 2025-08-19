@@ -60,37 +60,96 @@ pub fn marshal_posting(posting: &Posting, writer: &mut impl Write) -> std::fmt::
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Amount, Flag, account, commodity, directive::PostingAmount};
+    use crate::model::{Amount, Flag, AccountType, account, commodity, directive::PostingAmount};
     use rstest::rstest;
     use rstest_reuse::*;
     use rust_decimal_macros::dec;
 
     #[template]
     #[rstest]
-    #[case("  Assets:Checking  100.50 USD")]
-    #[case("    Liabilities:CreditCard  -37.45 USD")]
-    #[case("  Expenses:Restaurant")]
-    #[case("  Income:Salary  -5000.00 USD")]
-    #[case("   Assets:Cash   0 USD")]
-    #[case("\t\tAssets:Investment\t\t1000.00 EUR")]
-    #[case("  Equity:Opening-Balances")]
-    #[case("  * Assets:Checking  100.50 USD")]
-    #[case("  ! Liabilities:CreditCard  -37.45 USD")]
-    #[case("  Assets:Investment  10 STOCK {50.00 USD}")]
-    #[case("  Assets:Investment  10 STOCK @ 55.00 USD")]
-    #[case("  Assets:Investment  10 STOCK {50.00 USD} @ 55.00 USD")]
-    #[case("  * Assets:Investment  10 STOCK { 50.00 USD } @ 55.00 USD")]
-    fn valid_posting_template(#[case] input: &str) {}
+    #[case("  Assets:Checking  100.50 USD", None, AccountType::Assets, vec!["Checking"], Some((dec!(100.50), "USD", None, None)))]
+    #[case("    Liabilities:CreditCard  -37.45 USD", None, AccountType::Liabilities, vec!["CreditCard"], Some((dec!(-37.45), "USD", None, None)))]
+    #[case("  Expenses:Restaurant", None, AccountType::Expenses, vec!["Restaurant"], None)]
+    #[case("  Income:Salary  -5000.00 USD", None, AccountType::Income, vec!["Salary"], Some((dec!(-5000.00), "USD", None, None)))]
+    #[case("   Assets:Cash   0 USD", None, AccountType::Assets, vec!["Cash"], Some((dec!(0), "USD", None, None)))]
+    #[case("\t\tAssets:Investment\t\t1000.00 EUR", None, AccountType::Assets, vec!["Investment"], Some((dec!(1000.00), "EUR", None, None)))]
+    #[case("  Equity:Opening-Balances", None, AccountType::Equity, vec!["Opening-Balances"], None)]
+    #[case("  * Assets:Checking  100.50 USD", Some(Flag::Complete), AccountType::Assets, vec!["Checking"], Some((dec!(100.50), "USD", None, None)))]
+    #[case("  ! Liabilities:CreditCard  -37.45 USD", Some(Flag::Incomplete), AccountType::Liabilities, vec!["CreditCard"], Some((dec!(-37.45), "USD", None, None)))]
+    #[case("  Assets:Investment  10 STOCK {50.00 USD}", None, AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", Some((dec!(50.00), "USD")), None)))]
+    #[case("  Assets:Investment  10 STOCK @ 55.00 USD", None, AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", None, Some((dec!(55.00), "USD")))))]
+    #[case("  Assets:Investment  10 STOCK {50.00 USD} @ 55.00 USD", None, AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", Some((dec!(50.00), "USD")), Some((dec!(55.00), "USD")))))]
+    #[case("  * Assets:Investment  10 STOCK { 50.00 USD } @ 55.00 USD", Some(Flag::Complete), AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", Some((dec!(50.00), "USD")), Some((dec!(55.00), "USD")))))]
+    fn valid_posting_template(
+        #[case] input: &str,
+        #[case] expected_flag: Option<Flag>,
+        #[case] expected_account_type: AccountType,
+        #[case] expected_account_components: Vec<&str>,
+        #[case] expected_amount: Option<(rust_decimal::Decimal, &str, Option<(rust_decimal::Decimal, &str)>, Option<(rust_decimal::Decimal, &str)>)>
+    ) {}
 
     #[apply(valid_posting_template)]
-    fn parse_valid_posting(#[case] input: &str) {
+    fn parse_valid_posting(
+        #[case] input: &str,
+        #[case] expected_flag: Option<Flag>,
+        #[case] expected_account_type: AccountType,
+        #[case] expected_account_components: Vec<&str>,
+        #[case] expected_amount: Option<(rust_decimal::Decimal, &str, Option<(rust_decimal::Decimal, &str)>, Option<(rust_decimal::Decimal, &str)>)>
+    ) {
         let result = parse_posting().parse(input);
         assert!(result.has_output(), "Failed to parse posting: {}", input);
-        let _parsed = result.into_result().unwrap();
+        let parsed = result.into_result().unwrap();
+        
+        // Validate flag
+        assert_eq!(parsed.flag(), expected_flag);
+        
+        // Validate account
+        assert_eq!(parsed.account().account_type(), expected_account_type);
+        let components: Vec<&str> = parsed.account().components().map(AsRef::as_ref).collect();
+        assert_eq!(components, expected_account_components);
+        
+        // Validate amount
+        match expected_amount {
+            Some((exp_number, exp_commodity, exp_cost, exp_price)) => {
+                assert!(parsed.has_amount());
+                let posting_amount = parsed.amount().unwrap();
+                assert_eq!(*posting_amount.amount().number(), exp_number);
+                assert_eq!(posting_amount.amount().commodity().as_ref(), exp_commodity);
+                
+                // Validate cost
+                if let Some((cost_number, cost_commodity)) = exp_cost {
+                    assert!(posting_amount.has_cost());
+                    let cost = posting_amount.cost().unwrap();
+                    assert_eq!(*cost.number(), cost_number);
+                    assert_eq!(cost.commodity().as_ref(), cost_commodity);
+                } else {
+                    assert!(!posting_amount.has_cost());
+                }
+                
+                // Validate price
+                if let Some((price_number, price_commodity)) = exp_price {
+                    assert!(posting_amount.has_price());
+                    let price = posting_amount.price().unwrap();
+                    assert_eq!(*price.number(), price_number);
+                    assert_eq!(price.commodity().as_ref(), price_commodity);
+                } else {
+                    assert!(!posting_amount.has_price());
+                }
+            }
+            None => {
+                assert!(!parsed.has_amount());
+            }
+        }
     }
 
     #[apply(valid_posting_template)]
-    fn marshal_and_parse_posting(#[case] input: &str) {
+    fn marshal_and_parse_posting(
+        #[case] input: &str,
+        #[case] _expected_flag: Option<Flag>,
+        #[case] _expected_account_type: AccountType,
+        #[case] _expected_account_components: Vec<&str>,
+        #[case] _expected_amount: Option<(rust_decimal::Decimal, &str, Option<(rust_decimal::Decimal, &str)>, Option<(rust_decimal::Decimal, &str)>)>
+    ) {
         // Parse the original
         let result = parse_posting().parse(input);
         assert!(result.has_output());
@@ -110,72 +169,7 @@ mod tests {
         assert_eq!(original, reparsed);
     }
 
-    #[test]
-    fn parse_posting_with_amount() {
-        let input = "  Assets:Checking  100.50 USD";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
 
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Checking"]);
-        assert!(posting.has_amount());
-        assert_eq!(*posting.amount().unwrap().amount().number(), dec!(100.50));
-        assert_eq!(
-            posting.amount().unwrap().amount().commodity().as_ref(),
-            "USD"
-        );
-    }
-
-    #[test]
-    fn parse_posting_without_amount() {
-        let input = "  Expenses:Restaurant";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Restaurant"]);
-        assert!(!posting.has_amount());
-        assert_eq!(posting.amount(), None);
-    }
-
-    #[test]
-    fn parse_posting_negative_amount() {
-        let input = "  Liabilities:CreditCard  -37.45 USD";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["CreditCard"]);
-        assert!(posting.has_amount());
-        assert_eq!(*posting.amount().unwrap().amount().number(), dec!(-37.45));
-    }
-
-    #[test]
-    fn parse_posting_zero_amount() {
-        let input = "  Assets:Cash  0 USD";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        assert!(posting.has_amount());
-        assert_eq!(*posting.amount().unwrap().amount().number(), dec!(0));
-    }
-
-    #[test]
-    fn parse_posting_tabs() {
-        let input = "\t\tAssets:Investment\t\t1000.00 EUR";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Investment"]);
-        assert!(posting.has_amount());
-        assert_eq!(*posting.amount().unwrap().amount().number(), dec!(1000.00));
-    }
 
     #[rstest]
     #[case("Assets:Checking 100.50 USD")] // Missing leading whitespace
@@ -243,76 +237,6 @@ mod tests {
         assert_eq!(output, "  Assets:Cash  0 USD");
     }
 
-    #[test]
-    fn parse_posting_with_flag() {
-        let input = "  * Assets:Checking  100.50 USD";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Checking"]);
-        assert!(posting.has_flag());
-        assert_eq!(posting.flag(), Some(Flag::Complete));
-        assert!(posting.has_amount());
-    }
-
-    #[test]
-    fn parse_posting_with_cost() {
-        let input = "  Assets:Investment  10 STOCK {50.00 USD}";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Investment"]);
-        assert!(posting.has_amount());
-        let posting_amount = posting.amount().unwrap();
-        assert_eq!(*posting_amount.amount().number(), dec!(10));
-        assert_eq!(posting_amount.amount().commodity().as_ref(), "STOCK");
-        assert!(posting_amount.has_cost());
-        assert_eq!(*posting_amount.cost().unwrap().number(), dec!(50.00));
-        assert_eq!(posting_amount.cost().unwrap().commodity().as_ref(), "USD");
-    }
-
-    #[test]
-    fn parse_posting_with_price() {
-        let input = "  Assets:Investment  10 STOCK @ 55.00 USD";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Investment"]);
-        assert!(posting.has_amount());
-        let posting_amount = posting.amount().unwrap();
-        assert_eq!(*posting_amount.amount().number(), dec!(10));
-        assert_eq!(posting_amount.amount().commodity().as_ref(), "STOCK");
-        assert!(posting_amount.has_price());
-        assert_eq!(*posting_amount.price().unwrap().number(), dec!(55.00));
-        assert_eq!(posting_amount.price().unwrap().commodity().as_ref(), "USD");
-    }
-
-    #[test]
-    fn parse_posting_with_cost_and_price() {
-        let input = "  Assets:Investment  10 STOCK {50.00 USD} @ 55.00 USD";
-        let result = parse_posting().parse(input);
-        assert!(result.has_output());
-        let posting = result.into_result().unwrap();
-
-        let components: Vec<&str> = posting.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Investment"]);
-        assert!(posting.has_amount());
-        let posting_amount = posting.amount().unwrap();
-        assert_eq!(*posting_amount.amount().number(), dec!(10));
-        assert_eq!(posting_amount.amount().commodity().as_ref(), "STOCK");
-        assert!(posting_amount.has_cost());
-        assert_eq!(*posting_amount.cost().unwrap().number(), dec!(50.00));
-        assert_eq!(posting_amount.cost().unwrap().commodity().as_ref(), "USD");
-        assert!(posting_amount.has_price());
-        assert_eq!(*posting_amount.price().unwrap().number(), dec!(55.00));
-        assert_eq!(posting_amount.price().unwrap().commodity().as_ref(), "USD");
-    }
 
     #[test]
     fn marshal_posting_with_flag() {

@@ -42,36 +42,69 @@ pub fn marshal_balance_directive(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{account, commodity};
+    use crate::model::{AccountType, account, commodity};
     use rstest::rstest;
     use rstest_reuse::*;
     use rust_decimal_macros::dec;
 
     #[template]
     #[rstest]
-    #[case("balance Assets:Checking 1000.50 USD")]
-    #[case("balance Liabilities:CreditCard -3492.02 USD")]
-    #[case("balance Assets:Investment 319.020 ~ 0.002 RGAGX")]
-    #[case("balance Assets:Cash 0 USD")]
-    #[case("balance Assets:Crypto 1.5 BTC")]
-    #[case("balance Expenses:Food 500.00 USD")]
-    #[case("balance Income:Salary -5000.00 USD")]
-    #[case("balance Assets:Savings +2000.75 EUR")]
-    fn valid_balance_directive_template(#[case] input: &str) {}
+    #[case("balance Assets:Checking 1000.50 USD", AccountType::Assets, vec!["Checking"], dec!(1000.50), "USD", None)]
+    #[case("balance Liabilities:CreditCard -3492.02 USD", AccountType::Liabilities, vec!["CreditCard"], dec!(-3492.02), "USD", None)]
+    #[case("balance Assets:Investment 319.020 ~ 0.002 RGAGX", AccountType::Assets, vec!["Investment"], dec!(319.020), "RGAGX", Some(dec!(0.002)))]
+    #[case("balance Assets:Cash 0 USD", AccountType::Assets, vec!["Cash"], dec!(0), "USD", None)]
+    #[case("balance Assets:Crypto 1.5 BTC", AccountType::Assets, vec!["Crypto"], dec!(1.5), "BTC", None)]
+    #[case("balance Expenses:Food 500.00 USD", AccountType::Expenses, vec!["Food"], dec!(500.00), "USD", None)]
+    #[case("balance Income:Salary -5000.00 USD", AccountType::Income, vec!["Salary"], dec!(-5000.00), "USD", None)]
+    #[case("balance Assets:Savings +2000.75 EUR", AccountType::Assets, vec!["Savings"], dec!(2000.75), "EUR", None)]
+    fn valid_balance_directive_template(
+        #[case] input: &str,
+        #[case] expected_account_type: AccountType,
+        #[case] expected_account_components: Vec<&str>,
+        #[case] expected_number: rust_decimal::Decimal,
+        #[case] expected_commodity: &str,
+        #[case] expected_tolerance: Option<rust_decimal::Decimal>
+    ) {}
 
     #[apply(valid_balance_directive_template)]
-    fn parse_balance_directive_valid(#[case] input: &str) {
+    fn parse_balance_directive_valid(
+        #[case] input: &str,
+        #[case] expected_account_type: AccountType,
+        #[case] expected_account_components: Vec<&str>,
+        #[case] expected_number: rust_decimal::Decimal,
+        #[case] expected_commodity: &str,
+        #[case] expected_tolerance: Option<rust_decimal::Decimal>
+    ) {
         let result = parse_balance_directive().parse(input);
         assert!(
             result.has_output(),
             "Failed to parse balance directive: {}",
             input
         );
-        let _parsed = result.into_result().unwrap();
+        let parsed = result.into_result().unwrap();
+        
+        // Validate account
+        assert_eq!(parsed.account().account_type(), expected_account_type);
+        let components: Vec<&str> = parsed.account().components().map(AsRef::as_ref).collect();
+        assert_eq!(components, expected_account_components);
+        
+        // Validate amount
+        assert_eq!(*parsed.amount_with_tolerance().number(), expected_number);
+        assert_eq!(parsed.amount_with_tolerance().commodity().as_ref(), expected_commodity);
+        
+        // Validate tolerance
+        assert_eq!(parsed.amount_with_tolerance().tolerance().map(|t| *t), expected_tolerance);
     }
 
     #[apply(valid_balance_directive_template)]
-    fn marshal_and_parse_balance_directive(#[case] input: &str) {
+    fn marshal_and_parse_balance_directive(
+        #[case] input: &str,
+        #[case] _expected_account_type: AccountType,
+        #[case] _expected_account_components: Vec<&str>,
+        #[case] _expected_number: rust_decimal::Decimal,
+        #[case] _expected_commodity: &str,
+        #[case] _expected_tolerance: Option<rust_decimal::Decimal>
+    ) {
         // First parse the original
         let result = parse_balance_directive().parse(input);
         assert!(result.has_output());
@@ -91,77 +124,6 @@ mod tests {
         assert_eq!(original, reparsed);
     }
 
-    #[test]
-    fn parse_balance_directive_basic() {
-        let input = "balance Assets:Checking 1000.50 USD";
-        let result = parse_balance_directive().parse(input);
-        assert!(result.has_output());
-        let balance = result.into_result().unwrap();
-
-        let components: Vec<&str> = balance.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Checking"]);
-        assert_eq!(*balance.amount_with_tolerance().number(), dec!(1000.50));
-        assert_eq!(balance.amount_with_tolerance().commodity().as_ref(), "USD");
-        assert_eq!(balance.amount_with_tolerance().tolerance(), None);
-    }
-
-    #[test]
-    fn parse_balance_directive_negative() {
-        let input = "balance Liabilities:CreditCard -3492.02 USD";
-        let result = parse_balance_directive().parse(input);
-        assert!(result.has_output());
-        let balance = result.into_result().unwrap();
-
-        let components: Vec<&str> = balance.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["CreditCard"]);
-        assert_eq!(*balance.amount_with_tolerance().number(), dec!(-3492.02));
-        assert_eq!(balance.amount_with_tolerance().commodity().as_ref(), "USD");
-        assert_eq!(balance.amount_with_tolerance().tolerance(), None);
-    }
-
-    #[test]
-    fn parse_balance_directive_with_tolerance() {
-        let input = "balance Assets:Investment 319.020 ~ 0.002 RGAGX";
-        let result = parse_balance_directive().parse(input);
-        assert!(result.has_output());
-        let balance = result.into_result().unwrap();
-
-        let components: Vec<&str> = balance.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components, ["Investment"]);
-        assert_eq!(*balance.amount_with_tolerance().number(), dec!(319.020));
-        assert_eq!(
-            balance.amount_with_tolerance().commodity().as_ref(),
-            "RGAGX"
-        );
-        assert_eq!(
-            balance.amount_with_tolerance().tolerance(),
-            Some(&dec!(0.002))
-        );
-    }
-
-    #[test]
-    fn parse_balance_directive_zero_balance() {
-        let input = "balance Assets:Checking 0 USD";
-        let result = parse_balance_directive().parse(input);
-        assert!(result.has_output());
-        let balance = result.into_result().unwrap();
-
-        assert_eq!(*balance.amount_with_tolerance().number(), dec!(0));
-        assert_eq!(balance.amount_with_tolerance().commodity().as_ref(), "USD");
-        assert_eq!(balance.amount_with_tolerance().tolerance(), None);
-    }
-
-    #[test]
-    fn parse_balance_directive_positive_sign() {
-        let input = "balance Assets:Savings +2000.75 EUR";
-        let result = parse_balance_directive().parse(input);
-        assert!(result.has_output());
-        let balance = result.into_result().unwrap();
-
-        assert_eq!(*balance.amount_with_tolerance().number(), dec!(2000.75));
-        assert_eq!(balance.amount_with_tolerance().commodity().as_ref(), "EUR");
-        assert_eq!(balance.amount_with_tolerance().tolerance(), None);
-    }
 
     #[rstest]
     #[case("balance")] // Missing account and amount

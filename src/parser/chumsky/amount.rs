@@ -32,27 +32,31 @@ mod tests {
 
     #[template]
     #[rstest]
-    #[case("100.50 USD")]
-    #[case("-50.25 EUR")]
-    #[case("0 BTC")]
-    #[case("1234567.89 AAPL")]
-    #[case("0.00001 ETH")]
-    #[case("1000000 JPY")]
-    #[case("+500.75 CAD")]
-    #[case("42 SHARES")]
-    #[case("3.14159 A")]
-    #[case("999.999999 A'B.C_D-E1")]
-    fn valid_amount_template(#[case] input: &str) {}
+    #[case("100.50 USD", dec!(100.50), "USD")]
+    #[case("-50.25 EUR", dec!(-50.25), "EUR")]
+    #[case("0 BTC", dec!(0), "BTC")]
+    #[case("1234567.89 AAPL", dec!(1234567.89), "AAPL")]
+    #[case("0.00001 ETH", dec!(0.00001), "ETH")]
+    #[case("1000000 JPY", dec!(1000000), "JPY")]
+    #[case("+500.75 CAD", dec!(500.75), "CAD")]
+    #[case("42 SHARES", dec!(42), "SHARES")]
+    #[case("3.14159 A", dec!(3.14159), "A")]
+    #[case("999.999999 A'B.C_D-E1", dec!(999.999999), "A'B.C_D-E1")]
+    #[case("-3492.02 USD", dec!(-3492.02), "USD")]
+    #[case("+250.00 EUR", dec!(250.00), "EUR")]
+    fn valid_amount_template(#[case] input: &str, #[case] expected_number: rust_decimal::Decimal, #[case] expected_commodity: &str) {}
 
     #[apply(valid_amount_template)]
-    fn parse_valid_amount(#[case] input: &str) {
+    fn parse_valid_amount(#[case] input: &str, #[case] expected_number: rust_decimal::Decimal, #[case] expected_commodity: &str) {
         let result = parse_amount().parse(input);
         assert!(result.has_output(), "Failed to parse amount: {}", input);
-        let _parsed = result.into_result().unwrap();
+        let parsed = result.into_result().unwrap();
+        assert_eq!(*parsed.number(), expected_number);
+        assert_eq!(parsed.commodity().as_ref(), expected_commodity);
     }
 
     #[apply(valid_amount_template)]
-    fn marshal_and_parse_amount(#[case] input: &str) {
+    fn marshal_and_parse_amount(#[case] input: &str, #[case] _expected_number: rust_decimal::Decimal, #[case] _expected_commodity: &str) {
         // Parse the original
         let result = parse_amount().parse(input);
         assert!(result.has_output());
@@ -72,38 +76,7 @@ mod tests {
         assert_eq!(original, reparsed);
     }
 
-    #[test]
-    fn parse_amount_basic() {
-        let input = "100.50 USD";
-        let result = parse_amount().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
 
-        assert_eq!(*amount.number(), dec!(100.50));
-        assert_eq!(amount.commodity().as_ref(), "USD");
-    }
-
-    #[test]
-    fn parse_amount_negative() {
-        let input = "-3492.02 USD";
-        let result = parse_amount().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
-
-        assert_eq!(*amount.number(), dec!(-3492.02));
-        assert_eq!(amount.commodity().as_ref(), "USD");
-    }
-
-    #[test]
-    fn parse_amount_positive_sign() {
-        let input = "+250.00 EUR";
-        let result = parse_amount().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
-
-        assert_eq!(*amount.number(), dec!(250.00));
-        assert_eq!(amount.commodity().as_ref(), "EUR");
-    }
 
     #[test]
     fn parse_amount_integer() {

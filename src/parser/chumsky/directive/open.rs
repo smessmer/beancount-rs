@@ -54,29 +54,56 @@ mod tests {
 
     #[template]
     #[rstest]
-    #[case("open Assets:Cash")]
-    #[case("open Liabilities:CreditCard:CapitalOne")]
-    #[case("open Assets:Checking USD")]
-    #[case("open Assets:Investment USD, EUR")]
-    #[case("open Assets:Crypto BTC,ETH,USDC")]
-    #[case("open Expenses:Food")]
-    #[case("open Income:Salary")]
-    #[case("open Equity:Opening-Balances")]
-    fn valid_open_directive_template(#[case] input: &str) {}
+    #[case("open Assets:Cash", AccountType::Assets, vec!["Cash"], vec![])]
+    #[case("open Liabilities:CreditCard:CapitalOne", AccountType::Liabilities, vec!["CreditCard", "CapitalOne"], vec![])]
+    #[case("open Assets:Checking USD", AccountType::Assets, vec!["Checking"], vec!["USD"])]
+    #[case("open Assets:Investment USD, EUR", AccountType::Assets, vec!["Investment"], vec!["EUR", "USD"])]
+    #[case("open Assets:Crypto BTC,ETH,USDC", AccountType::Assets, vec!["Crypto"], vec!["BTC", "ETH", "USDC"])]
+    #[case("open Expenses:Food", AccountType::Expenses, vec!["Food"], vec![])]
+    #[case("open Income:Salary", AccountType::Income, vec!["Salary"], vec![])]
+    #[case("open Equity:Opening-Balances", AccountType::Equity, vec!["Opening-Balances"], vec![])]
+    fn valid_open_directive_template(
+        #[case] input: &str,
+        #[case] expected_account_type: AccountType,
+        #[case] expected_account_components: Vec<&str>,
+        #[case] expected_commodities: Vec<&str>
+    ) {}
 
     #[apply(valid_open_directive_template)]
-    fn parse_open_directive_valid(#[case] input: &str) {
+    fn parse_open_directive_valid(
+        #[case] input: &str,
+        #[case] expected_account_type: AccountType,
+        #[case] expected_account_components: Vec<&str>,
+        #[case] expected_commodities: Vec<&str>
+    ) {
         let result = parse_open_directive().parse(input);
         assert!(
             result.has_output(),
             "Failed to parse open directive: {}",
             input
         );
-        let _parsed = result.into_result().unwrap();
+        let parsed = result.into_result().unwrap();
+        
+        // Validate account
+        assert_eq!(parsed.account().account_type(), expected_account_type);
+        let components: Vec<&str> = parsed.account().components().map(AsRef::as_ref).collect();
+        assert_eq!(components, expected_account_components);
+        
+        // Validate commodities (sorted for consistent comparison)
+        let mut actual_commodities: Vec<&str> = parsed.commodity_constraints().map(|c| c.as_ref()).collect();
+        let mut expected_commodities_sorted = expected_commodities.clone();
+        actual_commodities.sort();
+        expected_commodities_sorted.sort();
+        assert_eq!(actual_commodities, expected_commodities_sorted);
     }
 
     #[apply(valid_open_directive_template)]
-    fn marshal_and_parse_open_directive(#[case] input: &str) {
+    fn marshal_and_parse_open_directive(
+        #[case] input: &str,
+        #[case] _expected_account_type: AccountType,
+        #[case] _expected_account_components: Vec<&str>,
+        #[case] _expected_commodities: Vec<&str>
+    ) {
         // First parse the original
         let result = parse_open_directive().parse(input);
         assert!(result.has_output());
@@ -100,112 +127,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn parse_open_directive_no_commodities() {
-        let input = "open Assets:Cash";
-        let result = parse_open_directive().parse(input);
-        assert!(result.has_output());
-        let directive = result.into_result().unwrap();
-
-        assert_eq!(directive.account().account_type(), AccountType::Assets);
-        let components: Vec<&str> = directive
-            .account()
-            .components()
-            .map(AsRef::as_ref)
-            .collect();
-        assert_eq!(components, ["Cash"]);
-        assert_eq!(directive.commodity_constraints().len(), 0);
-    }
-
-    #[test]
-    fn parse_open_directive_single_commodity() {
-        let input = "open Assets:Checking USD";
-        let result = parse_open_directive().parse(input);
-        assert!(result.has_output());
-        let directive = result.into_result().unwrap();
-
-        assert_eq!(directive.account().account_type(), AccountType::Assets);
-        let components: Vec<&str> = directive
-            .account()
-            .components()
-            .map(AsRef::as_ref)
-            .collect();
-        assert_eq!(components, ["Checking"]);
-        assert_eq!(directive.commodity_constraints().len(), 1);
-        assert!(
-            directive
-                .commodity_constraints()
-                .any(|c| c.as_ref() == "USD")
-        );
-    }
-
-    #[test]
-    fn parse_open_directive_multiple_commodities_with_spaces() {
-        let input = "open Assets:Investment USD, EUR, GBP";
-        let result = parse_open_directive().parse(input);
-        assert!(result.has_output());
-        let directive = result.into_result().unwrap();
-
-        assert_eq!(directive.account().account_type(), AccountType::Assets);
-        let components: Vec<&str> = directive
-            .account()
-            .components()
-            .map(AsRef::as_ref)
-            .collect();
-        assert_eq!(components, ["Investment"]);
-        assert_eq!(directive.commodity_constraints().len(), 3);
-
-        let commodity_strs: HashSet<&str> = directive
-            .commodity_constraints()
-            .map(|c| c.as_ref())
-            .collect();
-        assert_eq!(commodity_strs, hash_set!["USD", "EUR", "GBP"]);
-    }
-
-    #[test]
-    fn parse_open_directive_multiple_commodities_without_spaces() {
-        let input = "open Assets:Investment USD,EUR,GBP";
-        let result = parse_open_directive().parse(input);
-        assert!(result.has_output());
-        let directive = result.into_result().unwrap();
-
-        assert_eq!(directive.account().account_type(), AccountType::Assets);
-        let components: Vec<&str> = directive
-            .account()
-            .components()
-            .map(AsRef::as_ref)
-            .collect();
-        assert_eq!(components, ["Investment"]);
-        assert_eq!(directive.commodity_constraints().len(), 3);
-
-        let commodity_strs: HashSet<&str> = directive
-            .commodity_constraints()
-            .map(|c| c.as_ref())
-            .collect();
-        assert_eq!(commodity_strs, hash_set!["USD", "EUR", "GBP"]);
-    }
-
-    #[test]
-    fn parse_open_directive_complex_account() {
-        let input = "open Liabilities:CreditCard:CapitalOne USD";
-        let result = parse_open_directive().parse(input);
-        assert!(result.has_output());
-        let directive = result.into_result().unwrap();
-
-        assert_eq!(directive.account().account_type(), AccountType::Liabilities);
-        let components: Vec<&str> = directive
-            .account()
-            .components()
-            .map(AsRef::as_ref)
-            .collect();
-        assert_eq!(components, ["CreditCard", "CapitalOne"]);
-        assert_eq!(directive.commodity_constraints().len(), 1);
-        assert!(
-            directive
-                .commodity_constraints()
-                .any(|c| c.as_ref() == "USD")
-        );
-    }
 
     #[test]
     fn marshal_open_directive_no_commodities() {

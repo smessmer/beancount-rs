@@ -51,30 +51,35 @@ mod tests {
 
     #[template]
     #[rstest]
-    #[case("100.50 USD")]
-    #[case("-50.25 EUR")]
-    #[case("0 BTC")]
-    #[case("319.020 ~ 0.002 RGAGX")]
-    #[case("1000 ~ 1 JPY")]
-    #[case("+500.75 CAD")]
-    #[case("42 SHARES")]
-    #[case("3.14159 ~ 0.00001 PI")]
-    #[case("0.00001 ETH")]
-    fn valid_amount_with_tolerance_template(#[case] input: &str) {}
+    #[case("100.50 USD", dec!(100.50), "USD", None)]
+    #[case("-50.25 EUR", dec!(-50.25), "EUR", None)]
+    #[case("-3492.02 USD", dec!(-3492.02), "USD", None)]
+    #[case("0 BTC", dec!(0), "BTC", None)]
+    #[case("319.020 ~ 0.002 RGAGX", dec!(319.020), "RGAGX", Some(dec!(0.002)))]
+    #[case("1000 ~ 1 JPY", dec!(1000), "JPY", Some(dec!(1)))]
+    #[case("+500.75 CAD", dec!(500.75), "CAD", None)]
+    #[case("+250.00 EUR", dec!(250.00), "EUR", None)]
+    #[case("42 SHARES", dec!(42), "SHARES", None)]
+    #[case("3.14159 ~ 0.00001 PI", dec!(3.14159), "PI", Some(dec!(0.00001)))]
+    #[case("0.00001 ETH", dec!(0.00001), "ETH", None)]
+    fn valid_amount_with_tolerance_template(#[case] input: &str, #[case] expected_number: rust_decimal::Decimal, #[case] expected_commodity: &str, #[case] expected_tolerance: Option<rust_decimal::Decimal>) {}
 
     #[apply(valid_amount_with_tolerance_template)]
-    fn parse_valid_amount_with_tolerance(#[case] input: &str) {
+    fn parse_valid_amount_with_tolerance(#[case] input: &str, #[case] expected_number: rust_decimal::Decimal, #[case] expected_commodity: &str, #[case] expected_tolerance: Option<rust_decimal::Decimal>) {
         let result = parse_amount_with_tolerance().parse(input);
         assert!(
             result.has_output(),
             "Failed to parse amount with tolerance: {}",
             input
         );
-        let _parsed = result.into_result().unwrap();
+        let parsed = result.into_result().unwrap();
+        assert_eq!(*parsed.number(), expected_number);
+        assert_eq!(parsed.commodity().as_ref(), expected_commodity);
+        assert_eq!(parsed.tolerance().map(|t| *t), expected_tolerance);
     }
 
     #[apply(valid_amount_with_tolerance_template)]
-    fn marshal_and_parse_amount_with_tolerance(#[case] input: &str) {
+    fn marshal_and_parse_amount_with_tolerance(#[case] input: &str, #[case] _expected_number: rust_decimal::Decimal, #[case] _expected_commodity: &str, #[case] _expected_tolerance: Option<rust_decimal::Decimal>) {
         // Parse the original
         let result = parse_amount_with_tolerance().parse(input);
         assert!(result.has_output());
@@ -94,65 +99,7 @@ mod tests {
         assert_eq!(original, reparsed);
     }
 
-    #[test]
-    fn parse_amount_with_tolerance_basic() {
-        let input = "100.50 USD";
-        let result = parse_amount_with_tolerance().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
 
-        assert_eq!(*amount.number(), dec!(100.50));
-        assert_eq!(amount.tolerance(), None);
-        assert_eq!(amount.commodity().as_ref(), "USD");
-    }
-
-    #[test]
-    fn parse_amount_with_tolerance_with_tolerance() {
-        let input = "319.020 ~ 0.002 RGAGX";
-        let result = parse_amount_with_tolerance().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
-
-        assert_eq!(*amount.number(), dec!(319.020));
-        assert_eq!(amount.tolerance(), Some(&dec!(0.002)));
-        assert_eq!(amount.commodity().as_ref(), "RGAGX");
-    }
-
-    #[test]
-    fn parse_amount_with_tolerance_negative() {
-        let input = "-3492.02 USD";
-        let result = parse_amount_with_tolerance().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
-
-        assert_eq!(*amount.number(), dec!(-3492.02));
-        assert_eq!(amount.tolerance(), None);
-        assert_eq!(amount.commodity().as_ref(), "USD");
-    }
-
-    #[test]
-    fn parse_amount_with_tolerance_positive_sign() {
-        let input = "+250.00 EUR";
-        let result = parse_amount_with_tolerance().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
-
-        assert_eq!(*amount.number(), dec!(250.00));
-        assert_eq!(amount.tolerance(), None);
-        assert_eq!(amount.commodity().as_ref(), "EUR");
-    }
-
-    #[test]
-    fn parse_amount_with_tolerance_zero() {
-        let input = "0 BTC";
-        let result = parse_amount_with_tolerance().parse(input);
-        assert!(result.has_output());
-        let amount = result.into_result().unwrap();
-
-        assert_eq!(*amount.number(), dec!(0));
-        assert_eq!(amount.tolerance(), None);
-        assert_eq!(amount.commodity().as_ref(), "BTC");
-    }
 
     #[rstest]
     #[case("USD")] // Missing number

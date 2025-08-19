@@ -82,119 +82,83 @@ mod tests {
     #[template]
     #[rstest]
     #[case(
-        "* \"Cafe Mogador\" \"Lamb tagine with wine\"\n  Liabilities:CreditCard  -37.45 USD\n  Expenses:Restaurant"
-    )]
-    #[case("! \"Direct deposit\"\n  Assets:Checking  2500.00 USD\n  Income:Salary")]
-    #[case("*\n  Assets:Cash  -20.00 USD\n  Expenses:Coffee  20.00 USD")]
-    #[case("txn \"Grocery shopping\"\n  Assets:Cash  -45.50 USD\n  Expenses:Groceries")]
-    #[case(
-        "* \"Multi-way split\"\n  Assets:Checking  -100.00 USD\n  Expenses:Groceries  60.00 USD\n  Expenses:Gas  40.00 USD"
+        "* \"Cafe Mogador\" \"Lamb tagine with wine\"\n  Liabilities:CreditCard  -37.45 USD\n  Expenses:Restaurant",
+        Flag::Complete,
+        Some((Some("Cafe Mogador"), "Lamb tagine with wine")),
+        2
     )]
     #[case(
-        "* \"Mixed postings\"\n  Assets:Cash  -50.00 USD\n  Expenses:Food  30.00 USD\n  Expenses:Tips"
+        "! \"Direct deposit\"\n  Assets:Checking  2500.00 USD\n  Income:Salary",
+        Flag::Incomplete,
+        Some((None, "Direct deposit")),
+        2
     )]
-    fn valid_transaction_template(#[case] input: &str) {}
+    #[case(
+        "*\n  Assets:Cash  -20.00 USD\n  Expenses:Coffee  20.00 USD",
+        Flag::Complete,
+        None,
+        2
+    )]
+    #[case(
+        "txn \"Grocery shopping\"\n  Assets:Cash  -45.50 USD\n  Expenses:Groceries",
+        Flag::Complete,
+        Some((None, "Grocery shopping")),
+        2
+    )]
+    #[case(
+        "* \"Multi-way split\"\n  Assets:Checking  -100.00 USD\n  Expenses:Groceries  60.00 USD\n  Expenses:Gas  40.00 USD",
+        Flag::Complete,
+        Some((None, "Multi-way split")),
+        3
+    )]
+    #[case(
+        "* \"Mixed postings\"\n  Assets:Cash  -50.00 USD\n  Expenses:Food  30.00 USD\n  Expenses:Tips",
+        Flag::Complete,
+        Some((None, "Mixed postings")),
+        3
+    )]
+    fn valid_transaction_template(
+        #[case] input: &str,
+        #[case] expected_flag: Flag,
+        #[case] expected_description: Option<(Option<&str>, &str)>, // (payee, narration)
+        #[case] expected_posting_count: usize
+    ) {}
 
     #[apply(valid_transaction_template)]
-    fn parse_valid_transaction(#[case] input: &str) {
+    fn parse_valid_transaction(
+        #[case] input: &str,
+        #[case] expected_flag: Flag,
+        #[case] expected_description: Option<(Option<&str>, &str)>,
+        #[case] expected_posting_count: usize
+    ) {
         let result = parse_transaction_directive().parse(input);
         assert!(
             result.has_output(),
             "Failed to parse transaction: {}",
             input
         );
-        let _parsed = result.into_result().unwrap();
+        let parsed = result.into_result().unwrap();
+        
+        // Validate flag
+        assert_eq!(parsed.flag(), &expected_flag);
+        
+        // Validate description
+        match expected_description {
+            Some((expected_payee, expected_narration)) => {
+                assert!(parsed.description().is_some());
+                let description = parsed.description().unwrap();
+                assert_eq!(description.payee(), expected_payee);
+                assert_eq!(description.narration(), expected_narration);
+            }
+            None => {
+                assert!(parsed.description().is_none());
+            }
+        }
+        
+        // Validate posting count
+        assert_eq!(parsed.postings().len(), expected_posting_count);
     }
 
-    #[test]
-    fn parse_transaction_basic() {
-        let input = "* \"Cafe Mogador\" \"Lamb tagine with wine\"\n  Liabilities:CreditCard  -37.45 USD\n  Expenses:Restaurant";
-        let result = parse_transaction_directive().parse(input);
-        assert!(result.has_output());
-        let transaction = result.into_result().unwrap();
-
-        assert_eq!(transaction.flag(), &Flag::Complete);
-        assert_eq!(
-            transaction.description().and_then(|d| d.payee()),
-            Some("Cafe Mogador")
-        );
-        assert_eq!(
-            transaction.description().map(|d| d.narration()),
-            Some("Lamb tagine with wine")
-        );
-        assert_eq!(transaction.postings().len(), 2);
-
-        // Check first posting
-        let posting1 = &transaction.postings()[0];
-        let components1: Vec<&str> = posting1.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components1, ["CreditCard"]);
-        assert!(posting1.has_amount());
-        assert_eq!(*posting1.amount().unwrap().amount().number(), dec!(-37.45));
-
-        // Check second posting
-        let posting2 = &transaction.postings()[1];
-        let components2: Vec<&str> = posting2.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components2, ["Restaurant"]);
-        assert!(!posting2.has_amount());
-    }
-
-    #[test]
-    fn parse_transaction_narration_only() {
-        let input = "! \"Direct deposit\"\n  Assets:Checking  2500.00 USD\n  Income:Salary";
-        let result = parse_transaction_directive().parse(input);
-        assert!(result.has_output());
-        let transaction = result.into_result().unwrap();
-
-        assert_eq!(transaction.flag(), &Flag::Incomplete);
-        assert_eq!(transaction.description().and_then(|d| d.payee()), None);
-        assert_eq!(
-            transaction.description().map(|d| d.narration()),
-            Some("Direct deposit")
-        );
-        assert_eq!(transaction.postings().len(), 2);
-    }
-
-    #[test]
-    fn parse_transaction_no_payee_narration() {
-        let input = "*\n  Assets:Cash  -20.00 USD\n  Expenses:Coffee  20.00 USD";
-        let result = parse_transaction_directive().parse(input);
-        assert!(result.has_output());
-        let transaction = result.into_result().unwrap();
-
-        assert_eq!(transaction.flag(), &Flag::Complete);
-        assert_eq!(transaction.description().and_then(|d| d.payee()), None);
-        assert_eq!(transaction.description().map(|d| d.narration()), None);
-        assert_eq!(transaction.postings().len(), 2);
-    }
-
-    #[test]
-    fn parse_transaction_with_txn_keyword() {
-        let input = "txn \"Grocery shopping\"\n  Assets:Cash  -45.50 USD\n  Expenses:Groceries";
-        let result = parse_transaction_directive().parse(input);
-        assert!(result.has_output());
-        let transaction = result.into_result().unwrap();
-
-        assert_eq!(transaction.flag(), &Flag::Complete);
-        assert_eq!(transaction.description().and_then(|d| d.payee()), None);
-        assert_eq!(
-            transaction.description().map(|d| d.narration()),
-            Some("Grocery shopping")
-        );
-        assert_eq!(transaction.postings().len(), 2);
-
-        // Check first posting
-        let posting1 = &transaction.postings()[0];
-        let components1: Vec<&str> = posting1.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components1, ["Cash"]);
-        assert!(posting1.has_amount());
-        assert_eq!(*posting1.amount().unwrap().amount().number(), dec!(-45.50));
-
-        // Check second posting
-        let posting2 = &transaction.postings()[1];
-        let components2: Vec<&str> = posting2.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components2, ["Groceries"]);
-        assert!(!posting2.has_amount());
-    }
 
     #[test]
     fn marshal_transaction_basic() {
@@ -284,61 +248,6 @@ mod tests {
         assert!(!result.has_output(), "Should fail to parse: {}", input);
     }
 
-    #[test]
-    fn parse_transaction_multiple_postings() {
-        let input = "* \"Multi-way split\"\n  Assets:Checking  -100.00 USD\n  Expenses:Groceries  60.00 USD\n  Expenses:Gas  40.00 USD";
-        let result = parse_transaction_directive().parse(input);
-        assert!(result.has_output());
-        let transaction = result.into_result().unwrap();
-
-        assert_eq!(transaction.flag(), &Flag::Complete);
-        assert_eq!(transaction.postings().len(), 3);
-
-        // Check first posting
-        let posting1 = &transaction.postings()[0];
-        let components1: Vec<&str> = posting1.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components1, ["Checking"]);
-        assert!(posting1.has_amount());
-        assert_eq!(*posting1.amount().unwrap().amount().number(), dec!(-100.00));
-
-        // Check second posting
-        let posting2 = &transaction.postings()[1];
-        let components2: Vec<&str> = posting2.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components2, ["Groceries"]);
-        assert!(posting2.has_amount());
-        assert_eq!(*posting2.amount().unwrap().amount().number(), dec!(60.00));
-
-        // Check third posting
-        let posting3 = &transaction.postings()[2];
-        let components3: Vec<&str> = posting3.account().components().map(AsRef::as_ref).collect();
-        assert_eq!(components3, ["Gas"]);
-        assert!(posting3.has_amount());
-        assert_eq!(*posting3.amount().unwrap().amount().number(), dec!(40.00));
-    }
-
-    #[test]
-    fn parse_transaction_mixed_amounts_and_empty() {
-        let input = "* \"Mixed postings\"\n  Assets:Cash  -50.00 USD\n  Expenses:Food  30.00 USD\n  Expenses:Tips";
-        let result = parse_transaction_directive().parse(input);
-        assert!(result.has_output());
-        let transaction = result.into_result().unwrap();
-
-        assert_eq!(transaction.postings().len(), 3);
-
-        // Check first posting (with amount)
-        let posting1 = &transaction.postings()[0];
-        assert!(posting1.has_amount());
-        assert_eq!(*posting1.amount().unwrap().amount().number(), dec!(-50.00));
-
-        // Check second posting (with amount)
-        let posting2 = &transaction.postings()[1];
-        assert!(posting2.has_amount());
-        assert_eq!(*posting2.amount().unwrap().amount().number(), dec!(30.00));
-
-        // Check third posting (without amount - should be inferred)
-        let posting3 = &transaction.postings()[2];
-        assert!(!posting3.has_amount());
-    }
 
     #[test]
     fn marshal_transaction_multiple_postings() {
