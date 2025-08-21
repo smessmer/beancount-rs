@@ -12,8 +12,7 @@ use crate::{
 
 /// Parser for posting line
 /// Syntax: <whitespace> [<flag>] <account> [<amount> [{<cost>}] [@ <price>]]
-pub fn parse_posting<'a>() -> impl Parser<'a, &'a str, Posting<'a, 'a>, extra::Err<Rich<'a, char>>>
-{
+pub fn parse_posting<'a>() -> impl Parser<'a, &'a str, Posting<'a>, extra::Err<Rich<'a, char>>> {
     whitespace()
         .at_least(1)
         .ignore_then(parse_flag().then_ignore(whitespace().at_least(1)).or_not())
@@ -60,7 +59,7 @@ pub fn marshal_posting(posting: &Posting, writer: &mut impl Write) -> std::fmt::
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::model::{Amount, Flag, AccountType, account, commodity, directive::PostingAmount};
+    use crate::model::{AccountType, Amount, Flag, account, commodity, directive::PostingAmount};
     use rstest::rstest;
     use rstest_reuse::*;
     use rust_decimal_macros::dec;
@@ -85,8 +84,14 @@ mod tests {
         #[case] expected_flag: Option<Flag>,
         #[case] expected_account_type: AccountType,
         #[case] expected_account_components: Vec<&str>,
-        #[case] expected_amount: Option<(rust_decimal::Decimal, &str, Option<(rust_decimal::Decimal, &str)>, Option<(rust_decimal::Decimal, &str)>)>
-    ) {}
+        #[case] expected_amount: Option<(
+            rust_decimal::Decimal,
+            &str,
+            Option<(rust_decimal::Decimal, &str)>,
+            Option<(rust_decimal::Decimal, &str)>,
+        )>,
+    ) {
+    }
 
     #[apply(valid_posting_template)]
     fn parse_valid_posting(
@@ -94,20 +99,25 @@ mod tests {
         #[case] expected_flag: Option<Flag>,
         #[case] expected_account_type: AccountType,
         #[case] expected_account_components: Vec<&str>,
-        #[case] expected_amount: Option<(rust_decimal::Decimal, &str, Option<(rust_decimal::Decimal, &str)>, Option<(rust_decimal::Decimal, &str)>)>
+        #[case] expected_amount: Option<(
+            rust_decimal::Decimal,
+            &str,
+            Option<(rust_decimal::Decimal, &str)>,
+            Option<(rust_decimal::Decimal, &str)>,
+        )>,
     ) {
         let result = parse_posting().parse(input);
         assert!(result.has_output(), "Failed to parse posting: {}", input);
         let parsed = result.into_result().unwrap();
-        
+
         // Validate flag
         assert_eq!(parsed.flag(), expected_flag);
-        
+
         // Validate account
         assert_eq!(parsed.account().account_type(), expected_account_type);
         let components: Vec<&str> = parsed.account().components().map(AsRef::as_ref).collect();
         assert_eq!(components, expected_account_components);
-        
+
         // Validate amount
         match expected_amount {
             Some((exp_number, exp_commodity, exp_cost, exp_price)) => {
@@ -115,7 +125,7 @@ mod tests {
                 let posting_amount = parsed.amount().unwrap();
                 assert_eq!(*posting_amount.amount().number(), exp_number);
                 assert_eq!(posting_amount.amount().commodity().as_ref(), exp_commodity);
-                
+
                 // Validate cost
                 if let Some((cost_number, cost_commodity)) = exp_cost {
                     assert!(posting_amount.has_cost());
@@ -125,7 +135,7 @@ mod tests {
                 } else {
                     assert!(!posting_amount.has_cost());
                 }
-                
+
                 // Validate price
                 if let Some((price_number, price_commodity)) = exp_price {
                     assert!(posting_amount.has_price());
@@ -148,7 +158,12 @@ mod tests {
         #[case] _expected_flag: Option<Flag>,
         #[case] _expected_account_type: AccountType,
         #[case] _expected_account_components: Vec<&str>,
-        #[case] _expected_amount: Option<(rust_decimal::Decimal, &str, Option<(rust_decimal::Decimal, &str)>, Option<(rust_decimal::Decimal, &str)>)>
+        #[case] _expected_amount: Option<(
+            rust_decimal::Decimal,
+            &str,
+            Option<(rust_decimal::Decimal, &str)>,
+            Option<(rust_decimal::Decimal, &str)>,
+        )>,
     ) {
         // Parse the original
         let result = parse_posting().parse(input);
@@ -168,8 +183,6 @@ mod tests {
         // Should be equal
         assert_eq!(original, reparsed);
     }
-
-
 
     #[rstest]
     #[case("Assets:Checking 100.50 USD")] // Missing leading whitespace
@@ -236,7 +249,6 @@ mod tests {
         assert!(result.is_ok());
         assert_eq!(output, "  Assets:Cash  0 USD");
     }
-
 
     #[test]
     fn marshal_posting_with_flag() {

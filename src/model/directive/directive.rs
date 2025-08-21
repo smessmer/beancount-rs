@@ -3,32 +3,32 @@ use chrono::NaiveDate;
 use super::{DirectiveBalance, DirectiveOpen, DirectiveTransaction};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum DirectiveVariant<'a, 'c> {
-    Open(DirectiveOpen<'a, 'c>),
-    Balance(DirectiveBalance<'a, 'c>),
-    Transaction(DirectiveTransaction<'a, 'c>),
+pub enum DirectiveVariant<'a> {
+    Open(DirectiveOpen<'a>),
+    Balance(DirectiveBalance<'a>),
+    Transaction(DirectiveTransaction<'a>),
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Directive<'a, 'c> {
+pub struct Directive<'a> {
     date: NaiveDate,
-    content: DirectiveVariant<'a, 'c>,
+    content: DirectiveVariant<'a>,
 }
 
-impl<'a, 'c> Directive<'a, 'c> {
-    pub fn new(date: NaiveDate, content: DirectiveVariant<'a, 'c>) -> Self {
+impl<'a> Directive<'a> {
+    pub fn new(date: NaiveDate, content: DirectiveVariant<'a>) -> Self {
         Self { date, content }
     }
 
-    pub fn new_open(date: NaiveDate, open: DirectiveOpen<'a, 'c>) -> Self {
+    pub fn new_open(date: NaiveDate, open: DirectiveOpen<'a>) -> Self {
         Self::new(date, DirectiveVariant::Open(open))
     }
 
-    pub fn new_balance(date: NaiveDate, balance: DirectiveBalance<'a, 'c>) -> Self {
+    pub fn new_balance(date: NaiveDate, balance: DirectiveBalance<'a>) -> Self {
         Self::new(date, DirectiveVariant::Balance(balance))
     }
 
-    pub fn new_transaction(date: NaiveDate, transaction: DirectiveTransaction<'a, 'c>) -> Self {
+    pub fn new_transaction(date: NaiveDate, transaction: DirectiveTransaction<'a>) -> Self {
         Self::new(date, DirectiveVariant::Transaction(transaction))
     }
 
@@ -36,46 +36,46 @@ impl<'a, 'c> Directive<'a, 'c> {
         &self.date
     }
 
-    pub fn content(&self) -> &DirectiveVariant<'a, 'c> {
+    pub fn content(&self) -> &DirectiveVariant<'a> {
         &self.content
     }
 
-    pub fn as_open(&self) -> Option<&DirectiveOpen<'a, 'c>> {
+    pub fn as_open(&self) -> Option<&DirectiveOpen<'a>> {
         match &self.content {
             DirectiveVariant::Open(open) => Some(open),
             _ => None,
         }
     }
 
-    pub fn into_open(self) -> Option<DirectiveOpen<'a, 'c>> {
+    pub fn into_open(self) -> Option<DirectiveOpen<'a>> {
         match self.content {
             DirectiveVariant::Open(open) => Some(open),
             _ => None,
         }
     }
 
-    pub fn as_balance(&self) -> Option<&DirectiveBalance<'a, 'c>> {
+    pub fn as_balance(&self) -> Option<&DirectiveBalance<'a>> {
         match &self.content {
             DirectiveVariant::Balance(balance) => Some(balance),
             _ => None,
         }
     }
 
-    pub fn into_balance(self) -> Option<DirectiveBalance<'a, 'c>> {
+    pub fn into_balance(self) -> Option<DirectiveBalance<'a>> {
         match self.content {
             DirectiveVariant::Balance(balance) => Some(balance),
             _ => None,
         }
     }
 
-    pub fn as_transaction(&self) -> Option<&DirectiveTransaction<'a, 'c>> {
+    pub fn as_transaction(&self) -> Option<&DirectiveTransaction<'a>> {
         match &self.content {
             DirectiveVariant::Transaction(transaction) => Some(transaction),
             _ => None,
         }
     }
 
-    pub fn into_transaction(self) -> Option<DirectiveTransaction<'a, 'c>> {
+    pub fn into_transaction(self) -> Option<DirectiveTransaction<'a>> {
         match self.content {
             DirectiveVariant::Transaction(transaction) => Some(transaction),
             _ => None,

@@ -17,7 +17,7 @@ const KEYWORD_BALANCE: &str = "balance";
 /// Parser for balance directive (without date)
 /// Syntax: "balance" <account> <number> [~ <tolerance>] <commodity>
 pub fn parse_balance_directive<'a>()
--> impl Parser<'a, &'a str, DirectiveBalance<'a, 'a>, extra::Err<Rich<'a, char>>> {
+-> impl Parser<'a, &'a str, DirectiveBalance<'a>, extra::Err<Rich<'a, char>>> {
     keyword(KEYWORD_BALANCE)
         .then_ignore(whitespace().at_least(1))
         .ignore_then(parse_account())
@@ -63,8 +63,9 @@ mod tests {
         #[case] expected_account_components: Vec<&str>,
         #[case] expected_number: rust_decimal::Decimal,
         #[case] expected_commodity: &str,
-        #[case] expected_tolerance: Option<rust_decimal::Decimal>
-    ) {}
+        #[case] expected_tolerance: Option<rust_decimal::Decimal>,
+    ) {
+    }
 
     #[apply(valid_balance_directive_template)]
     fn parse_balance_directive_valid(
@@ -73,7 +74,7 @@ mod tests {
         #[case] expected_account_components: Vec<&str>,
         #[case] expected_number: rust_decimal::Decimal,
         #[case] expected_commodity: &str,
-        #[case] expected_tolerance: Option<rust_decimal::Decimal>
+        #[case] expected_tolerance: Option<rust_decimal::Decimal>,
     ) {
         let result = parse_balance_directive().parse(input);
         assert!(
@@ -82,18 +83,24 @@ mod tests {
             input
         );
         let parsed = result.into_result().unwrap();
-        
+
         // Validate account
         assert_eq!(parsed.account().account_type(), expected_account_type);
         let components: Vec<&str> = parsed.account().components().map(AsRef::as_ref).collect();
         assert_eq!(components, expected_account_components);
-        
+
         // Validate amount
         assert_eq!(*parsed.amount_with_tolerance().number(), expected_number);
-        assert_eq!(parsed.amount_with_tolerance().commodity().as_ref(), expected_commodity);
-        
+        assert_eq!(
+            parsed.amount_with_tolerance().commodity().as_ref(),
+            expected_commodity
+        );
+
         // Validate tolerance
-        assert_eq!(parsed.amount_with_tolerance().tolerance().map(|t| *t), expected_tolerance);
+        assert_eq!(
+            parsed.amount_with_tolerance().tolerance().map(|t| *t),
+            expected_tolerance
+        );
     }
 
     #[apply(valid_balance_directive_template)]
@@ -103,7 +110,7 @@ mod tests {
         #[case] _expected_account_components: Vec<&str>,
         #[case] _expected_number: rust_decimal::Decimal,
         #[case] _expected_commodity: &str,
-        #[case] _expected_tolerance: Option<rust_decimal::Decimal>
+        #[case] _expected_tolerance: Option<rust_decimal::Decimal>,
     ) {
         // First parse the original
         let result = parse_balance_directive().parse(input);
@@ -123,7 +130,6 @@ mod tests {
         // Should be equal
         assert_eq!(original, reparsed);
     }
-
 
     #[rstest]
     #[case("balance")] // Missing account and amount

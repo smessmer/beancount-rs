@@ -14,7 +14,7 @@ const KEYWORD_OPEN: &str = "open";
 /// Parser for open directive (without date)
 /// Syntax: "open" <account> [<commodity_list>]
 pub fn parse_open_directive<'a>()
--> impl Parser<'a, &'a str, DirectiveOpen<'a, 'a>, extra::Err<Rich<'a, char>>> {
+-> impl Parser<'a, &'a str, DirectiveOpen<'a>, extra::Err<Rich<'a, char>>> {
     keyword(KEYWORD_OPEN)
         .ignore_then(parse_account().padded())
         .then(
@@ -66,15 +66,16 @@ mod tests {
         #[case] input: &str,
         #[case] expected_account_type: AccountType,
         #[case] expected_account_components: Vec<&str>,
-        #[case] expected_commodities: Vec<&str>
-    ) {}
+        #[case] expected_commodities: Vec<&str>,
+    ) {
+    }
 
     #[apply(valid_open_directive_template)]
     fn parse_open_directive_valid(
         #[case] input: &str,
         #[case] expected_account_type: AccountType,
         #[case] expected_account_components: Vec<&str>,
-        #[case] expected_commodities: Vec<&str>
+        #[case] expected_commodities: Vec<&str>,
     ) {
         let result = parse_open_directive().parse(input);
         assert!(
@@ -83,14 +84,15 @@ mod tests {
             input
         );
         let parsed = result.into_result().unwrap();
-        
+
         // Validate account
         assert_eq!(parsed.account().account_type(), expected_account_type);
         let components: Vec<&str> = parsed.account().components().map(AsRef::as_ref).collect();
         assert_eq!(components, expected_account_components);
-        
+
         // Validate commodities (sorted for consistent comparison)
-        let mut actual_commodities: Vec<&str> = parsed.commodity_constraints().map(|c| c.as_ref()).collect();
+        let mut actual_commodities: Vec<&str> =
+            parsed.commodity_constraints().map(|c| c.as_ref()).collect();
         let mut expected_commodities_sorted = expected_commodities.clone();
         actual_commodities.sort();
         expected_commodities_sorted.sort();
@@ -102,7 +104,7 @@ mod tests {
         #[case] input: &str,
         #[case] _expected_account_type: AccountType,
         #[case] _expected_account_components: Vec<&str>,
-        #[case] _expected_commodities: Vec<&str>
+        #[case] _expected_commodities: Vec<&str>,
     ) {
         // First parse the original
         let result = parse_open_directive().parse(input);
@@ -126,7 +128,6 @@ mod tests {
             reparsed.commodity_constraints().collect::<HashSet<_>>()
         );
     }
-
 
     #[test]
     fn marshal_open_directive_no_commodities() {

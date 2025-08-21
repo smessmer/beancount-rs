@@ -17,7 +17,7 @@ const KEYWORD_TXN: &str = "txn";
 /// Parser for transaction directive (without date)
 /// Syntax: <flag> [<description>] <postings>
 pub fn parse_transaction_directive<'a>()
--> impl Parser<'a, &'a str, DirectiveTransaction<'a, 'a>, extra::Err<Rich<'a, char>>> {
+-> impl Parser<'a, &'a str, DirectiveTransaction<'a>, extra::Err<Rich<'a, char>>> {
     let flag = parse_flag().or(just(KEYWORD_TXN).to(Flag::Complete));
 
     flag.then(
@@ -35,8 +35,7 @@ pub fn parse_transaction_directive<'a>()
     })
 }
 
-fn parse_postings<'a>() -> impl Parser<'a, &'a str, Vec<Posting<'a, 'a>>, extra::Err<Rich<'a, char>>>
-{
+fn parse_postings<'a>() -> impl Parser<'a, &'a str, Vec<Posting<'a>>, extra::Err<Rich<'a, char>>> {
     just('\n')
         .ignore_then(parse_posting())
         .repeated()
@@ -121,15 +120,16 @@ mod tests {
         #[case] input: &str,
         #[case] expected_flag: Flag,
         #[case] expected_description: Option<(Option<&str>, &str)>, // (payee, narration)
-        #[case] expected_posting_count: usize
-    ) {}
+        #[case] expected_posting_count: usize,
+    ) {
+    }
 
     #[apply(valid_transaction_template)]
     fn parse_valid_transaction(
         #[case] input: &str,
         #[case] expected_flag: Flag,
         #[case] expected_description: Option<(Option<&str>, &str)>,
-        #[case] expected_posting_count: usize
+        #[case] expected_posting_count: usize,
     ) {
         let result = parse_transaction_directive().parse(input);
         assert!(
@@ -138,10 +138,10 @@ mod tests {
             input
         );
         let parsed = result.into_result().unwrap();
-        
+
         // Validate flag
         assert_eq!(parsed.flag(), &expected_flag);
-        
+
         // Validate description
         match expected_description {
             Some((expected_payee, expected_narration)) => {
@@ -154,11 +154,10 @@ mod tests {
                 assert!(parsed.description().is_none());
             }
         }
-        
+
         // Validate posting count
         assert_eq!(parsed.postings().len(), expected_posting_count);
     }
-
 
     #[test]
     fn marshal_transaction_basic() {
@@ -247,7 +246,6 @@ mod tests {
         let result = parse_transaction_directive().parse(input);
         assert!(!result.has_output(), "Should fail to parse: {}", input);
     }
-
 
     #[test]
     fn marshal_transaction_multiple_postings() {

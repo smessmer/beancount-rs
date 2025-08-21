@@ -1,14 +1,14 @@
 use crate::model::{Account, Flag, directive::PostingAmount};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Posting<'a, 'c> {
+pub struct Posting<'a> {
     account: Account<'a>,
     flag: Option<Flag>,
-    amount: Option<PostingAmount<'c>>,
+    amount: Option<PostingAmount<'a>>,
 }
 
-impl<'a, 'c> Posting<'a, 'c> {
-    pub fn new(account: Account<'a>, amount: PostingAmount<'c>) -> Self {
+impl<'a> Posting<'a> {
+    pub fn new(account: Account<'a>, amount: PostingAmount<'a>) -> Self {
         Self {
             account,
             flag: None,
@@ -37,7 +37,7 @@ impl<'a, 'c> Posting<'a, 'c> {
         self.flag
     }
 
-    pub fn amount(&self) -> Option<&PostingAmount<'c>> {
+    pub fn amount(&self) -> Option<&PostingAmount<'a>> {
         self.amount.as_ref()
     }
 

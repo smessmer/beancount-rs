@@ -3,14 +3,14 @@ use std::collections::HashSet;
 use crate::model::{Account, Commodity};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct DirectiveOpen<'a, 'c> {
+pub struct DirectiveOpen<'a> {
     account: Account<'a>,
-    commodity_constraints: HashSet<Commodity<'c>>,
+    commodity_constraints: HashSet<Commodity<'a>>,
     // TODO booking_method: BookingMethod,
 }
 
-impl<'a, 'c> DirectiveOpen<'a, 'c> {
-    pub fn new(account: Account<'a>, commodity_constraints: HashSet<Commodity<'c>>) -> Self {
+impl<'a> DirectiveOpen<'a> {
+    pub fn new(account: Account<'a>, commodity_constraints: HashSet<Commodity<'a>>) -> Self {
         Self {
             account,
             commodity_constraints,
@@ -23,7 +23,7 @@ impl<'a, 'c> DirectiveOpen<'a, 'c> {
 
     pub fn commodity_constraints(
         &self,
-    ) -> impl Iterator<Item = &'_ Commodity<'c>> + ExactSizeIterator {
+    ) -> impl Iterator<Item = &'_ Commodity<'a>> + ExactSizeIterator {
         self.commodity_constraints.iter().map(|c| c)
     }
 }

@@ -15,8 +15,8 @@ use crate::{
 
 /// Parser for complete directive with date
 /// Syntax: <date> <directive_content>
-pub fn parse_directive<'a>()
--> impl Parser<'a, &'a str, Directive<'a, 'a>, extra::Err<Rich<'a, char>>> {
+pub fn parse_directive<'a>() -> impl Parser<'a, &'a str, Directive<'a>, extra::Err<Rich<'a, char>>>
+{
     parse_date()
         .then_ignore(whitespace().at_least(1))
         .then(parse_directive_variant())
@@ -24,7 +24,7 @@ pub fn parse_directive<'a>()
 }
 
 fn parse_directive_variant<'a>()
--> impl Parser<'a, &'a str, DirectiveVariant<'a, 'a>, extra::Err<Rich<'a, char>>> {
+-> impl Parser<'a, &'a str, DirectiveVariant<'a>, extra::Err<Rich<'a, char>>> {
     choice((
         parse_open_directive().map(DirectiveVariant::Open),
         parse_balance_directive().map(DirectiveVariant::Balance),

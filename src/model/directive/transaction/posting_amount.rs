@@ -1,15 +1,15 @@
 use crate::model::Amount;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PostingAmount<'c> {
-    amount: Amount<'c>,
+pub struct PostingAmount<'a> {
+    amount: Amount<'a>,
     // TODO I think beancount supports total cost vs per-item cost, with {} or {{}}.
-    cost: Option<Amount<'c>>,
-    price: Option<Amount<'c>>,
+    cost: Option<Amount<'a>>,
+    price: Option<Amount<'a>>,
 }
 
-impl<'c> PostingAmount<'c> {
-    pub fn new(amount: Amount<'c>) -> Self {
+impl<'a> PostingAmount<'a> {
+    pub fn new(amount: Amount<'a>) -> Self {
         Self {
             amount,
             cost: None,
@@ -17,25 +17,25 @@ impl<'c> PostingAmount<'c> {
         }
     }
 
-    pub fn with_cost(mut self, cost: Amount<'c>) -> Self {
+    pub fn with_cost(mut self, cost: Amount<'a>) -> Self {
         self.cost = Some(cost);
         self
     }
 
-    pub fn with_price(mut self, price: Amount<'c>) -> Self {
+    pub fn with_price(mut self, price: Amount<'a>) -> Self {
         self.price = Some(price);
         self
     }
 
-    pub fn amount(&self) -> &Amount<'c> {
+    pub fn amount(&self) -> &Amount<'a> {
         &self.amount
     }
 
-    pub fn cost(&self) -> Option<&Amount<'c>> {
+    pub fn cost(&self) -> Option<&Amount<'a>> {
         self.cost.as_ref()
     }
 
-    pub fn price(&self) -> Option<&Amount<'c>> {
+    pub fn price(&self) -> Option<&Amount<'a>> {
         self.price.as_ref()
     }
 

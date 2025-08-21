@@ -4,13 +4,13 @@ use crate::model::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct DirectiveTransaction<'a, 'c> {
+pub struct DirectiveTransaction<'a> {
     flag: Flag,
     description: Option<TransactionDescription<'a>>,
-    postings: Vec<Posting<'a, 'c>>,
+    postings: Vec<Posting<'a>>,
 }
 
-impl<'a, 'c> DirectiveTransaction<'a, 'c> {
+impl<'a> DirectiveTransaction<'a> {
     pub fn new(flag: Flag) -> Self {
         Self {
             flag,
@@ -35,20 +35,20 @@ impl<'a, 'c> DirectiveTransaction<'a, 'c> {
         self.description.as_ref()
     }
 
-    pub fn postings(&self) -> &[Posting<'a, 'c>] {
+    pub fn postings(&self) -> &[Posting<'a>] {
         &self.postings
     }
 
-    pub fn add_posting(&mut self, posting: Posting<'a, 'c>) {
+    pub fn add_posting(&mut self, posting: Posting<'a>) {
         self.postings.push(posting);
     }
 
-    pub fn with_posting(mut self, posting: Posting<'a, 'c>) -> Self {
+    pub fn with_posting(mut self, posting: Posting<'a>) -> Self {
         self.add_posting(posting);
         self
     }
 
-    pub fn with_postings(mut self, postings: Vec<Posting<'a, 'c>>) -> Self {
+    pub fn with_postings(mut self, postings: Vec<Posting<'a>>) -> Self {
         self.postings = postings;
         self
     }

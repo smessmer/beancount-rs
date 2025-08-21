@@ -2,13 +2,13 @@ use crate::model::{Account, AmountWithTolerance};
 
 /// Balance assertion
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct DirectiveBalance<'a, 'c> {
+pub struct DirectiveBalance<'a> {
     account: Account<'a>,
-    amount_with_tolerance: AmountWithTolerance<'c>,
+    amount_with_tolerance: AmountWithTolerance<'a>,
 }
 
-impl<'a, 'c> DirectiveBalance<'a, 'c> {
-    pub fn new(account: Account<'a>, amount_with_tolerance: AmountWithTolerance<'c>) -> Self {
+impl<'a> DirectiveBalance<'a> {
+    pub fn new(account: Account<'a>, amount_with_tolerance: AmountWithTolerance<'a>) -> Self {
         Self {
             account,
             amount_with_tolerance,
@@ -19,7 +19,7 @@ impl<'a, 'c> DirectiveBalance<'a, 'c> {
         &self.account
     }
 
-    pub fn amount_with_tolerance(&self) -> &AmountWithTolerance<'c> {
+    pub fn amount_with_tolerance(&self) -> &AmountWithTolerance<'a> {
         &self.amount_with_tolerance
     }
 }
