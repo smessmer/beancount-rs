@@ -4,6 +4,7 @@ use crate::model::Commodity;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Amount<'c> {
+    // TODO Beancount allows expressions as amounts, should we represent that? See [beancount_parser_lima].
     number: Decimal,
     commodity: Commodity<'c>,
 }
