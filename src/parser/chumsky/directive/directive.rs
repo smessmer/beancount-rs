@@ -2,7 +2,7 @@ use chumsky::{prelude::*, text::whitespace};
 use std::fmt::Write;
 
 use crate::{
-    model::directive::{Directive, DirectiveContent},
+    model::directive::{Directive, DirectiveVariant},
     parser::chumsky::{
         date::parse_date,
         directive::{
@@ -19,16 +19,16 @@ pub fn parse_directive<'a>()
 -> impl Parser<'a, &'a str, Directive<'a, 'a>, extra::Err<Rich<'a, char>>> {
     parse_date()
         .then_ignore(whitespace().at_least(1))
-        .then(parse_directive_content())
+        .then(parse_directive_variant())
         .map(|(date, content)| Directive::new(date, content))
 }
 
-fn parse_directive_content<'a>()
--> impl Parser<'a, &'a str, DirectiveContent<'a, 'a>, extra::Err<Rich<'a, char>>> {
+fn parse_directive_variant<'a>()
+-> impl Parser<'a, &'a str, DirectiveVariant<'a, 'a>, extra::Err<Rich<'a, char>>> {
     choice((
-        parse_open_directive().map(DirectiveContent::Open),
-        parse_balance_directive().map(DirectiveContent::Balance),
-        parse_transaction_directive().map(DirectiveContent::Transaction),
+        parse_open_directive().map(DirectiveVariant::Open),
+        parse_balance_directive().map(DirectiveVariant::Balance),
+        parse_transaction_directive().map(DirectiveVariant::Transaction),
         // TODO: Add more directive types here as they're implemented
     ))
 }
@@ -42,13 +42,13 @@ pub fn marshal_directive(directive: &Directive, writer: &mut impl Write) -> std:
 }
 
 fn marshal_directive_content(
-    content: &DirectiveContent,
+    content: &DirectiveVariant,
     writer: &mut impl Write,
 ) -> std::fmt::Result {
     match content {
-        DirectiveContent::Open(open) => marshal_open_directive(open, writer),
-        DirectiveContent::Balance(balance) => marshal_balance_directive(balance, writer),
-        DirectiveContent::Transaction(transaction) => {
+        DirectiveVariant::Open(open) => marshal_open_directive(open, writer),
+        DirectiveVariant::Balance(balance) => marshal_balance_directive(balance, writer),
+        DirectiveVariant::Transaction(transaction) => {
             marshal_transaction_directive(transaction, writer)
         }
     }
@@ -204,23 +204,23 @@ mod tests {
     }
 
     #[test]
-    fn parse_directive_content_open() {
+    fn parse_directive_variant_open() {
         let input = "open Assets:Cash USD";
-        let result = parse_directive_content().parse(input);
+        let result = parse_directive_variant().parse(input);
         assert!(result.has_output());
         let content = result.into_result().unwrap();
 
         match content {
-            DirectiveContent::Open(open) => {
+            DirectiveVariant::Open(open) => {
                 let components: Vec<&str> =
                     open.account().components().map(AsRef::as_ref).collect();
                 assert_eq!(components, ["Cash"]);
                 assert_eq!(open.commodity_constraints().len(), 1);
             }
-            DirectiveContent::Balance(_) => {
+            DirectiveVariant::Balance(_) => {
                 panic!("Expected Open directive, got Balance");
             }
-            DirectiveContent::Transaction(_) => {
+            DirectiveVariant::Transaction(_) => {
                 panic!("Expected Open directive, got Transaction");
             }
         }
@@ -231,7 +231,7 @@ mod tests {
         let account = account!(Assets:Checking);
         let commodities = hash_set![Commodity::try_from("USD").unwrap()];
         let open_directive = crate::model::DirectiveOpen::new(account, commodities);
-        let content = DirectiveContent::Open(open_directive);
+        let content = DirectiveVariant::Open(open_directive);
 
         let mut output = String::new();
         let result = marshal_directive_content(&content, &mut output);
@@ -268,14 +268,14 @@ mod tests {
     }
 
     #[test]
-    fn parse_directive_content_balance() {
+    fn parse_directive_variant_balance() {
         let input = "balance Assets:Checking 1000.50 USD";
-        let result = parse_directive_content().parse(input);
+        let result = parse_directive_variant().parse(input);
         assert!(result.has_output());
         let content = result.into_result().unwrap();
 
         match content {
-            DirectiveContent::Balance(balance) => {
+            DirectiveVariant::Balance(balance) => {
                 let components: Vec<&str> =
                     balance.account().components().map(AsRef::as_ref).collect();
                 assert_eq!(components, ["Checking"]);
@@ -286,10 +286,10 @@ mod tests {
                 assert_eq!(balance.amount_with_tolerance().commodity().as_ref(), "USD");
                 assert_eq!(balance.amount_with_tolerance().tolerance(), None);
             }
-            DirectiveContent::Open(_) => {
+            DirectiveVariant::Open(_) => {
                 panic!("Expected Balance directive, got Open");
             }
-            DirectiveContent::Transaction(_) => {
+            DirectiveVariant::Transaction(_) => {
                 panic!("Expected Balance directive, got Transaction");
             }
         }
