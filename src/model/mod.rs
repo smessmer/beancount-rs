@@ -12,8 +12,5 @@ pub use commodity::{Commodity, InvalidCommodityError, commodity};
 
 pub mod directive;
 pub use directive::{
-    Directive, DirectiveBalance, DirectiveOpen, DirectiveTransaction, DirectiveVariant,
+    Directive, DirectiveBalance, DirectiveOpen, DirectiveTransaction, DirectiveVariant, Flag,
 };
-
-mod flag;
-pub use flag::Flag;

@@ -6,4 +6,4 @@ mod transaction;
 pub use balance::DirectiveBalance;
 pub use directive::{Directive, DirectiveVariant};
 pub use open::DirectiveOpen;
-pub use transaction::{DirectiveTransaction, Posting, PostingAmount, TransactionDescription};
+pub use transaction::{DirectiveTransaction, Flag, Posting, PostingAmount, TransactionDescription};
