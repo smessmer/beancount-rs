@@ -26,9 +26,9 @@ pub fn parse_transaction_directive<'a>()
     )
     .then(parse_postings())
     .map(|((flag, description), postings)| match description {
-        Some(desc) => {
-            DirectiveTransaction::new_with_description(flag, desc).with_postings(postings)
-        }
+        Some(desc) => DirectiveTransaction::new(flag)
+            .with_description(desc)
+            .with_postings(postings),
         None => DirectiveTransaction::new(flag).with_postings(postings),
     })
 }
@@ -166,12 +166,13 @@ mod tests {
         let posting1 = Posting::new(account1, posting_amount);
         let posting2 = Posting::new_without_amount(account2);
 
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_with_payee("Cafe Mogador", "Lamb tagine with wine"),
-        )
-        .with_posting(posting1)
-        .with_posting(posting2);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_with_payee(
+                "Cafe Mogador",
+                "Lamb tagine with wine",
+            ))
+            .with_posting(posting1)
+            .with_posting(posting2);
 
         let mut output = String::new();
         let result = marshal_transaction_directive(&transaction, &mut output);
@@ -192,12 +193,10 @@ mod tests {
         let posting1 = Posting::new(account1, posting_amount);
         let posting2 = Posting::new_without_amount(account2);
 
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::EXCLAMATION,
-            TransactionDescription::new_without_payee("Direct deposit"),
-        )
-        .with_posting(posting1)
-        .with_posting(posting2);
+        let transaction = DirectiveTransaction::new(Flag::EXCLAMATION)
+            .with_description(TransactionDescription::new_without_payee("Direct deposit"))
+            .with_posting(posting1)
+            .with_posting(posting2);
 
         let mut output = String::new();
         let result = marshal_transaction_directive(&transaction, &mut output);
@@ -258,13 +257,11 @@ mod tests {
         let posting2 = Posting::new(account2, PostingAmount::new(amount2));
         let posting3 = Posting::new(account3, PostingAmount::new(amount3));
 
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_without_payee("Multi-way split"),
-        )
-        .with_posting(posting1)
-        .with_posting(posting2)
-        .with_posting(posting3);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_without_payee("Multi-way split"))
+            .with_posting(posting1)
+            .with_posting(posting2)
+            .with_posting(posting3);
 
         let mut output = String::new();
         let result = marshal_transaction_directive(&transaction, &mut output);
@@ -288,13 +285,11 @@ mod tests {
         let posting2 = Posting::new(account2, PostingAmount::new(amount2));
         let posting3 = Posting::new_without_amount(account3);
 
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_without_payee("Mixed postings"),
-        )
-        .with_posting(posting1)
-        .with_posting(posting2)
-        .with_posting(posting3);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_without_payee("Mixed postings"))
+            .with_posting(posting1)
+            .with_posting(posting2)
+            .with_posting(posting3);
 
         let mut output = String::new();
         let result = marshal_transaction_directive(&transaction, &mut output);
@@ -322,12 +317,10 @@ mod tests {
         );
         let cash_posting = Posting::new(cash_account, PostingAmount::new(cash_amount));
 
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_without_payee("Buy stocks"),
-        )
-        .with_posting(stock_posting)
-        .with_posting(cash_posting);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_without_payee("Buy stocks"))
+            .with_posting(stock_posting)
+            .with_posting(cash_posting);
 
         let mut output = String::new();
         let result = marshal_transaction_directive(&transaction, &mut output);
@@ -360,12 +353,10 @@ mod tests {
         );
         let cash_posting = Posting::new(cash_account, PostingAmount::new(cash_amount));
 
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_without_payee("Sell stocks"),
-        )
-        .with_posting(stock_posting)
-        .with_posting(cash_posting);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_without_payee("Sell stocks"))
+            .with_posting(stock_posting)
+            .with_posting(cash_posting);
 
         let mut output = String::new();
         let result = marshal_transaction_directive(&transaction, &mut output);
@@ -401,12 +392,12 @@ mod tests {
         );
         let cash_posting = Posting::new(cash_account, PostingAmount::new(cash_amount));
 
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_without_payee("Complex stock transaction"),
-        )
-        .with_posting(stock_posting)
-        .with_posting(cash_posting);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_without_payee(
+                "Complex stock transaction",
+            ))
+            .with_posting(stock_posting)
+            .with_posting(cash_posting);
 
         let mut output = String::new();
         let result = marshal_transaction_directive(&transaction, &mut output);

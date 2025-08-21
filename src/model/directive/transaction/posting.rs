@@ -5,6 +5,7 @@ pub struct Posting<'a> {
     account: Account<'a>,
     flag: Option<Flag>,
     amount: Option<PostingAmount<'a>>,
+    // TODO In beancount-parser-lima, postings can have metadata?
 }
 
 impl<'a> Posting<'a> {

@@ -13,6 +13,7 @@ pub enum DirectiveVariant<'a> {
 pub struct Directive<'a> {
     date: NaiveDate,
     content: DirectiveVariant<'a>,
+    // TODO directives can have metadata
 }
 
 impl<'a> Directive<'a> {

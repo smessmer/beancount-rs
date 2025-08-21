@@ -19,11 +19,11 @@ impl<'a> DirectiveTransaction<'a> {
         }
     }
 
-    pub fn new_with_description(flag: Flag, description: TransactionDescription<'a>) -> Self {
+    pub fn with_description(self, description: TransactionDescription<'a>) -> Self {
         Self {
-            flag,
+            flag: self.flag,
             description: Some(description),
-            postings: Vec::new(),
+            postings: self.postings,
         }
     }
 
@@ -71,8 +71,7 @@ mod tests {
 
     #[test]
     fn test_transaction_with_description() {
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::EXCLAMATION,
+        let transaction = DirectiveTransaction::new(Flag::EXCLAMATION).with_description(
             TransactionDescription::new_with_payee("Cafe Mogador", "Lamb tagine with wine"),
         );
 
@@ -177,10 +176,8 @@ mod tests {
 
     #[test]
     fn test_clone_transaction() {
-        let transaction1 = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_with_payee("Store", "Purchase"),
-        );
+        let transaction1 = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_with_payee("Store", "Purchase"));
         let transaction2 = transaction1.clone();
 
         assert_eq!(transaction1, transaction2);
@@ -188,10 +185,8 @@ mod tests {
 
     #[test]
     fn test_transaction_only_narration() {
-        let transaction = DirectiveTransaction::new_with_description(
-            Flag::ASTERISK,
-            TransactionDescription::new_without_payee("Direct deposit"),
-        );
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
+            .with_description(TransactionDescription::new_without_payee("Direct deposit"));
 
         assert_eq!(transaction.description().and_then(|d| d.payee()), None);
         assert_eq!(
@@ -208,7 +203,7 @@ mod tests {
             "Bank of America".to_string(),
             "Transfer".to_string(),
         );
-        let transaction = DirectiveTransaction::new_with_description(Flag::ASTERISK, description);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK).with_description(description);
 
         assert_eq!(
             transaction.description().and_then(|d| d.payee()),
