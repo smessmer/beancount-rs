@@ -7,7 +7,6 @@ mod date;
 mod decimal;
 mod directive;
 mod error_format;
-mod flag;
 mod quoted_string;
 
 pub use directive::{marshal_directive, parse_directive};

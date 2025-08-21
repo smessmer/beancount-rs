@@ -5,8 +5,8 @@ use crate::{
     model::directive::Posting,
     parser::chumsky::{
         account::{marshal_account, parse_account},
+        directive::transaction::flag::{marshal_flag, parse_flag},
         directive::transaction::posting_amount::{marshal_posting_amount, parse_posting_amount},
-        flag::{marshal_flag, parse_flag},
     },
 };
 
@@ -73,12 +73,12 @@ mod tests {
     #[case("   Assets:Cash   0 USD", None, AccountType::Assets, vec!["Cash"], Some((dec!(0), "USD", None, None)))]
     #[case("\t\tAssets:Investment\t\t1000.00 EUR", None, AccountType::Assets, vec!["Investment"], Some((dec!(1000.00), "EUR", None, None)))]
     #[case("  Equity:Opening-Balances", None, AccountType::Equity, vec!["Opening-Balances"], None)]
-    #[case("  * Assets:Checking  100.50 USD", Some(Flag::Complete), AccountType::Assets, vec!["Checking"], Some((dec!(100.50), "USD", None, None)))]
-    #[case("  ! Liabilities:CreditCard  -37.45 USD", Some(Flag::Incomplete), AccountType::Liabilities, vec!["CreditCard"], Some((dec!(-37.45), "USD", None, None)))]
+    #[case("  * Assets:Checking  100.50 USD", Some(Flag::ASTERISK), AccountType::Assets, vec!["Checking"], Some((dec!(100.50), "USD", None, None)))]
+    #[case("  ! Liabilities:CreditCard  -37.45 USD", Some(Flag::EXCLAMATION), AccountType::Liabilities, vec!["CreditCard"], Some((dec!(-37.45), "USD", None, None)))]
     #[case("  Assets:Investment  10 STOCK {50.00 USD}", None, AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", Some((dec!(50.00), "USD")), None)))]
     #[case("  Assets:Investment  10 STOCK @ 55.00 USD", None, AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", None, Some((dec!(55.00), "USD")))))]
     #[case("  Assets:Investment  10 STOCK {50.00 USD} @ 55.00 USD", None, AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", Some((dec!(50.00), "USD")), Some((dec!(55.00), "USD")))))]
-    #[case("  * Assets:Investment  10 STOCK { 50.00 USD } @ 55.00 USD", Some(Flag::Complete), AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", Some((dec!(50.00), "USD")), Some((dec!(55.00), "USD")))))]
+    #[case("  * Assets:Investment  10 STOCK { 50.00 USD } @ 55.00 USD", Some(Flag::ASTERISK), AccountType::Assets, vec!["Investment"], Some((dec!(10), "STOCK", Some((dec!(50.00), "USD")), Some((dec!(55.00), "USD")))))]
     fn valid_posting_template(
         #[case] input: &str,
         #[case] expected_flag: Option<Flag>,
@@ -256,7 +256,7 @@ mod tests {
         let commodity = commodity!(USD);
         let amount = Amount::new(dec!(100.50), commodity);
         let posting_amount = PostingAmount::new(amount);
-        let posting = Posting::new(account, posting_amount).with_flag(Flag::Complete);
+        let posting = Posting::new(account, posting_amount).with_flag(Flag::ASTERISK);
 
         let mut output = String::new();
         let result = marshal_posting(&posting, &mut output);

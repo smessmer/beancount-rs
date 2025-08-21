@@ -1,4 +1,5 @@
 mod description;
+mod flag;
 mod posting;
 mod posting_amount;
 mod transaction;

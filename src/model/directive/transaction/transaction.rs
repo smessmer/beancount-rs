@@ -62,9 +62,9 @@ mod tests {
 
     #[test]
     fn test_new_transaction() {
-        let transaction = DirectiveTransaction::new(Flag::Complete);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK);
 
-        assert_eq!(transaction.flag(), &Flag::Complete);
+        assert_eq!(transaction.flag(), &Flag::ASTERISK);
         assert_eq!(transaction.description(), None);
         assert_eq!(transaction.postings().len(), 0);
     }
@@ -72,11 +72,11 @@ mod tests {
     #[test]
     fn test_transaction_with_description() {
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Incomplete,
+            Flag::EXCLAMATION,
             TransactionDescription::new_with_payee("Cafe Mogador", "Lamb tagine with wine"),
         );
 
-        assert_eq!(transaction.flag(), &Flag::Incomplete);
+        assert_eq!(transaction.flag(), &Flag::EXCLAMATION);
         assert_eq!(
             transaction.description().as_ref().and_then(|d| d.payee()),
             Some("Cafe Mogador")
@@ -102,7 +102,7 @@ mod tests {
         let posting1 = Posting::new(account1, posting_amount1);
         let posting2 = Posting::new(account2, posting_amount2);
 
-        let transaction = DirectiveTransaction::new(Flag::Complete)
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
             .with_posting(posting1.clone())
             .with_posting(posting2.clone());
 
@@ -122,7 +122,7 @@ mod tests {
         let posting1 = Posting::new(account1, posting_amount);
         let posting2 = Posting::new_without_amount(account2);
 
-        let transaction = DirectiveTransaction::new(Flag::Complete)
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
             .with_posting(posting1)
             .with_posting(posting2.clone());
 
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn test_add_posting() {
-        let mut transaction = DirectiveTransaction::new(Flag::Complete);
+        let mut transaction = DirectiveTransaction::new(Flag::ASTERISK);
         let account = account!(Assets:Cash);
         let commodity = commodity!(USD);
         let amount = Amount::new(dec!(100.00), commodity);
@@ -161,7 +161,7 @@ mod tests {
         let posting2 = Posting::new(account2, posting_amount2);
 
         let postings = vec![posting1.clone(), posting2.clone()];
-        let transaction = DirectiveTransaction::new(Flag::Complete).with_postings(postings);
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK).with_postings(postings);
 
         assert_eq!(transaction.postings().len(), 2);
         assert_eq!(transaction.postings()[0], posting1);
@@ -170,15 +170,15 @@ mod tests {
 
     #[test]
     fn test_transaction_flag_equality() {
-        assert_eq!(Flag::Complete, Flag::Complete);
-        assert_eq!(Flag::Incomplete, Flag::Incomplete);
-        assert_ne!(Flag::Complete, Flag::Incomplete);
+        assert_eq!(Flag::ASTERISK, Flag::ASTERISK);
+        assert_eq!(Flag::EXCLAMATION, Flag::EXCLAMATION);
+        assert_ne!(Flag::ASTERISK, Flag::EXCLAMATION);
     }
 
     #[test]
     fn test_clone_transaction() {
         let transaction1 = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_with_payee("Store", "Purchase"),
         );
         let transaction2 = transaction1.clone();
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn test_transaction_only_narration() {
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_without_payee("Direct deposit"),
         );
 
@@ -208,7 +208,7 @@ mod tests {
             "Bank of America".to_string(),
             "Transfer".to_string(),
         );
-        let transaction = DirectiveTransaction::new_with_description(Flag::Complete, description);
+        let transaction = DirectiveTransaction::new_with_description(Flag::ASTERISK, description);
 
         assert_eq!(
             transaction.description().and_then(|d| d.payee()),

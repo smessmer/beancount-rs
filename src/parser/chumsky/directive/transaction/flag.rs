@@ -3,25 +3,15 @@ use std::fmt::Write;
 
 use crate::model::Flag;
 
-const fn flag_char(flag: Flag) -> char {
-    match flag {
-        Flag::Complete => '*',
-        Flag::Incomplete => '!',
-    }
-}
-
 /// Parser for flag characters (without whitespace)
 /// Syntax: * (complete) or ! (incomplete)
 pub fn parse_flag<'a>() -> impl Parser<'a, &'a str, Flag, extra::Err<Rich<'a, char>>> {
-    choice((
-        just(flag_char(Flag::Complete)).to(Flag::Complete),
-        just(flag_char(Flag::Incomplete)).to(Flag::Incomplete),
-    ))
+    any().filter(|c: &char| !c.is_whitespace()).map(Flag::new)
 }
 
 /// Marshal a flag to its string representation
 pub fn marshal_flag(flag: Flag, writer: &mut impl Write) -> std::fmt::Result {
-    write!(writer, "{}", flag_char(flag))
+    write!(writer, "{}", flag.as_char())
 }
 
 #[cfg(test)]
@@ -34,7 +24,7 @@ mod tests {
         let result = parse_flag().parse("*");
         assert!(result.has_output());
         let flag = result.into_result().unwrap();
-        assert_eq!(flag, Flag::Complete);
+        assert_eq!(flag, Flag::ASTERISK);
     }
 
     #[test]
@@ -42,11 +32,10 @@ mod tests {
         let result = parse_flag().parse("!");
         assert!(result.has_output());
         let flag = result.into_result().unwrap();
-        assert_eq!(flag, Flag::Incomplete);
+        assert_eq!(flag, Flag::EXCLAMATION);
     }
 
     #[rstest]
-    #[case("x")] // Invalid character
     #[case("")] // Empty string
     #[case("**")] // Multiple flags
     #[case("*!")] // Both flags
@@ -60,7 +49,7 @@ mod tests {
     #[test]
     fn marshal_flag_complete() {
         let mut output = String::new();
-        let result = marshal_flag(Flag::Complete, &mut output);
+        let result = marshal_flag(Flag::ASTERISK, &mut output);
         assert!(result.is_ok());
         assert_eq!(output, "*");
     }
@@ -68,14 +57,14 @@ mod tests {
     #[test]
     fn marshal_flag_incomplete() {
         let mut output = String::new();
-        let result = marshal_flag(Flag::Incomplete, &mut output);
+        let result = marshal_flag(Flag::EXCLAMATION, &mut output);
         assert!(result.is_ok());
         assert_eq!(output, "!");
     }
 
     #[rstest]
-    #[case(Flag::Complete, "*")]
-    #[case(Flag::Incomplete, "!")]
+    #[case(Flag::ASTERISK, "*")]
+    #[case(Flag::EXCLAMATION, "!")]
     fn marshal_flag_roundtrip(#[case] original_flag: Flag, #[case] expected_text: &str) {
         // Marshal flag to string
         let mut output = String::new();
@@ -98,7 +87,7 @@ mod tests {
         let flag1 = result.into_result().unwrap();
         let flag2 = flag1; // This should work because Flag implements Copy
         assert_eq!(flag1, flag2);
-        assert_eq!(flag1, Flag::Complete);
-        assert_eq!(flag2, Flag::Complete);
+        assert_eq!(flag1, Flag::ASTERISK);
+        assert_eq!(flag2, Flag::ASTERISK);
     }
 }

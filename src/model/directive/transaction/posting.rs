@@ -172,11 +172,11 @@ mod tests {
         let commodity = commodity!(USD);
         let amount = Amount::new(dec!(100.00), commodity);
         let posting_amount = PostingAmount::new(amount);
-        let posting = Posting::new(account.clone(), posting_amount).with_flag(Flag::Complete);
+        let posting = Posting::new(account.clone(), posting_amount).with_flag(Flag::ASTERISK);
 
         assert_eq!(posting.account(), &account);
         assert!(posting.has_flag());
-        assert_eq!(posting.flag(), Some(Flag::Complete));
+        assert_eq!(posting.flag(), Some(Flag::ASTERISK));
     }
 
     #[test]

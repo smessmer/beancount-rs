@@ -3,12 +3,10 @@ use std::fmt::Write;
 
 use crate::{
     model::{DirectiveTransaction, Flag, directive::Posting},
-    parser::chumsky::{
-        directive::transaction::{
-            description::{marshal_transaction_description, parse_transaction_description},
-            posting::{marshal_posting, parse_posting},
-        },
-        flag::parse_flag,
+    parser::chumsky::directive::transaction::{
+        description::{marshal_transaction_description, parse_transaction_description},
+        flag::{marshal_flag, parse_flag},
+        posting::{marshal_posting, parse_posting},
     },
 };
 
@@ -18,7 +16,7 @@ const KEYWORD_TXN: &str = "txn";
 /// Syntax: <flag> [<description>] <postings>
 pub fn parse_transaction_directive<'a>()
 -> impl Parser<'a, &'a str, DirectiveTransaction<'a>, extra::Err<Rich<'a, char>>> {
-    let flag = parse_flag().or(just(KEYWORD_TXN).to(Flag::Complete));
+    let flag = just(KEYWORD_TXN).to(Flag::ASTERISK).or(parse_flag());
 
     flag.then(
         whitespace()
@@ -47,8 +45,6 @@ pub fn marshal_transaction_directive(
     directive: &DirectiveTransaction,
     writer: &mut impl Write,
 ) -> std::fmt::Result {
-    use crate::parser::chumsky::flag::marshal_flag;
-
     // Write flag
     marshal_flag(*directive.flag(), writer)?;
 
@@ -82,37 +78,37 @@ mod tests {
     #[rstest]
     #[case(
         "* \"Cafe Mogador\" \"Lamb tagine with wine\"\n  Liabilities:CreditCard  -37.45 USD\n  Expenses:Restaurant",
-        Flag::Complete,
+        Flag::ASTERISK,
         Some((Some("Cafe Mogador"), "Lamb tagine with wine")),
         2
     )]
     #[case(
         "! \"Direct deposit\"\n  Assets:Checking  2500.00 USD\n  Income:Salary",
-        Flag::Incomplete,
+        Flag::EXCLAMATION,
         Some((None, "Direct deposit")),
         2
     )]
     #[case(
         "*\n  Assets:Cash  -20.00 USD\n  Expenses:Coffee  20.00 USD",
-        Flag::Complete,
+        Flag::ASTERISK,
         None,
         2
     )]
     #[case(
         "txn \"Grocery shopping\"\n  Assets:Cash  -45.50 USD\n  Expenses:Groceries",
-        Flag::Complete,
+        Flag::ASTERISK,
         Some((None, "Grocery shopping")),
         2
     )]
     #[case(
         "* \"Multi-way split\"\n  Assets:Checking  -100.00 USD\n  Expenses:Groceries  60.00 USD\n  Expenses:Gas  40.00 USD",
-        Flag::Complete,
+        Flag::ASTERISK,
         Some((None, "Multi-way split")),
         3
     )]
     #[case(
         "* \"Mixed postings\"\n  Assets:Cash  -50.00 USD\n  Expenses:Food  30.00 USD\n  Expenses:Tips",
-        Flag::Complete,
+        Flag::ASTERISK,
         Some((None, "Mixed postings")),
         3
     )]
@@ -171,7 +167,7 @@ mod tests {
         let posting2 = Posting::new_without_amount(account2);
 
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_with_payee("Cafe Mogador", "Lamb tagine with wine"),
         )
         .with_posting(posting1)
@@ -197,7 +193,7 @@ mod tests {
         let posting2 = Posting::new_without_amount(account2);
 
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Incomplete,
+            Flag::EXCLAMATION,
             TransactionDescription::new_without_payee("Direct deposit"),
         )
         .with_posting(posting1)
@@ -224,7 +220,7 @@ mod tests {
         let posting1 = Posting::new(account1, posting_amount1);
         let posting2 = Posting::new(account2, posting_amount2);
 
-        let transaction = DirectiveTransaction::new(Flag::Complete)
+        let transaction = DirectiveTransaction::new(Flag::ASTERISK)
             .with_posting(posting1)
             .with_posting(posting2);
 
@@ -263,7 +259,7 @@ mod tests {
         let posting3 = Posting::new(account3, PostingAmount::new(amount3));
 
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_without_payee("Multi-way split"),
         )
         .with_posting(posting1)
@@ -293,7 +289,7 @@ mod tests {
         let posting3 = Posting::new_without_amount(account3);
 
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_without_payee("Mixed postings"),
         )
         .with_posting(posting1)
@@ -327,7 +323,7 @@ mod tests {
         let cash_posting = Posting::new(cash_account, PostingAmount::new(cash_amount));
 
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_without_payee("Buy stocks"),
         )
         .with_posting(stock_posting)
@@ -365,7 +361,7 @@ mod tests {
         let cash_posting = Posting::new(cash_account, PostingAmount::new(cash_amount));
 
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_without_payee("Sell stocks"),
         )
         .with_posting(stock_posting)
@@ -406,7 +402,7 @@ mod tests {
         let cash_posting = Posting::new(cash_account, PostingAmount::new(cash_amount));
 
         let transaction = DirectiveTransaction::new_with_description(
-            Flag::Complete,
+            Flag::ASTERISK,
             TransactionDescription::new_without_payee("Complex stock transaction"),
         )
         .with_posting(stock_posting)
